@@ -1,13 +1,16 @@
 #ifndef FUNCTIONS_H_INCLUDED
 #define FUNCTIONS_H_INCLUDED
 
+#include "functions.h"
 #include <stdlib.h>
 #include <time.h>
+#include <stdio.h>
 
 extern int process_id;
 
 void prnt(const char* string);
 struct Process process_gen();
+int generator(struct Process *ptr);
 
 struct Process
 {
