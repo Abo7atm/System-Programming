@@ -2,20 +2,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 // void insert_at_end(int);
 // void traverse();
 // void delete_from_begin();
 // void delete_from_end();
 
-int count = 0;
-
-void insert_at_end(struct node *start , struct Process *x)
+void enqueue(struct node *start , struct Process *x)
 {
     struct node *t, *temp;
 
     t = (struct node *)malloc(sizeof(struct node));
-    count++;
 
     if (start == NULL)
     {
@@ -55,7 +51,7 @@ void traverse(struct node *start)
     printf("%d\n", t->data);
 }
 
-void delete_from_begin(struct node *start)
+void dequeue(struct node *start)
 {
     struct node *t;
     int n;

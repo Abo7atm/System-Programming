@@ -30,12 +30,10 @@ struct node
 {
     struct Process *data;
     struct node *next;
-    int count;
 };
 
-void insert_at_end(int);
-void traverse();
-void delete_from_begin();
-void delete_from_end();
+void enqueue(struct node *start , struct Process *x);
+void traverse(struct node *start);
+void dequeue(struct node *start);
 
 #endif
