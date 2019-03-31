@@ -11,7 +11,7 @@ extern int process_id;
 void prnt(const char* string);
 struct Process process_gen();
 int generator(struct Process *ptr);
-
+/* bitwise for res? */
 struct Process
 {
     int id;
