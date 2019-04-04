@@ -17,11 +17,9 @@ float proba()
 }
 
 /**
- * randomly generates a
- * maximum of 5 jobs per second
- * and hands them to jod scheduler
+ * Generates a process
  * */
-struct Process process_gen()
+Process process_gen()
 {
     time_t curtime;
     time(&curtime);
@@ -30,21 +28,23 @@ struct Process process_gen()
 
     p_time = (rand() % (1000 - 10 + 1)) + 10;
     mem = (rand() % (100 - 1 + 1)) + 1;
-    struct Process r = { process_id++, ctime(&curtime), p_time, mem, proba(), proba(), proba(), proba() };
+    Process r = { process_id++, ctime(&curtime), p_time, mem, proba(), proba(), proba(), proba() };
     return r;
 }
 
 /**
 * Generate an array of maximum of five processes
-* per second and returns the pointer
+* per second and enqueue them to the parameter queue
 */
-int generator(struct Process *ptr)
+int generator(Process_queue *queue)
 {
     int n_processes = rand() % (5 + 1);
+    Process t;
 
     for (int i = 0; i < n_processes + 1; i++)
     {
-        ptr[i] = process_gen();
+        t = process_gen();
+        enqueue(queue, &t);
     }
 
     return n_processes;

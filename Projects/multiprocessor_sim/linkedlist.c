@@ -7,33 +7,40 @@
 // void delete_from_begin();
 // void delete_from_end();
 
-void enqueue(struct node *start , struct Process *x)
+Process_queue *init_pq()
 {
-    struct node *t, *temp;
+    Process_queue *pq;
+    pq = (Process_queue *)malloc(sizeof(Process_queue));
+    pq->head = NULL;
+    pq->tail = NULL;
+    pq->size = 0;
+    return pq;
+}
 
-    t = (struct node *)malloc(sizeof(struct node));
+void enqueue(Process_queue *queue, Process *x)
+{
+    Process_node *t;
 
-    if (start == NULL)
+    t = (Process_node *)malloc(sizeof(Process_node));
+    t->data = x;
+    t->next = NULL;
+
+    if (queue->head == NULL)
     {
-        start = t;
-        start->data = x;
-        start->next = NULL;
+        queue->head = x;
+        queue->tail = queue->head;
         return;
     }
 
-    temp = start;
-
-    while (temp->next != NULL)
-        temp = temp->next;
-
-    temp->next = t;
-    t->data = x;
-    t->next = NULL;
+    queue->tail->next = x;
+    queue->tail = x;
+    /* upon successful enqueue, increase the size */
+    queue->size++;
 }
 
-void traverse(struct node *start)
+void traverse(Process_node *start)
 {
-    struct node *t;
+    Process_node *t;
 
     t = start;
 
@@ -48,24 +55,25 @@ void traverse(struct node *start)
         printf("%d\n", t->data);
         t = t->next;
     }
+
     printf("%d\n", t->data);
 }
 
-void dequeue(struct node *start)
+Process_node* dequeue(Process_queue *queue)
 {
-    struct node *t;
-    int n;
-
-    if (start == NULL)
+    /* check if queue is empty */
+    if (queue->head == NULL)
     {
-        printf("Linked list is already empty.\n");
-        return;
+        printf("Queue empty\n");
+        return NULL;
     }
 
-    n = start->data;
-    t = start->next;
-    free(start);
-    start = t;
+    Process_node *result;
 
-    printf("%d deleted from beginning successfully.\n", n);
+    result = queue->head;
+    queue->head = queue->head->next;
+
+    /* upon successful dequeue decrease size */
+    queue->size--;
+    return result;
 }

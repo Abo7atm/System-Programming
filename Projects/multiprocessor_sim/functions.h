@@ -10,9 +10,9 @@ extern int process_id;
 
 void prnt(const char* string);
 struct Process process_gen();
-int generator(struct Process *ptr);
+int generator(Process_queue *queue);
 /* bitwise for res? */
-struct Process
+struct
 {
     int id;
     char* creation_date;
@@ -22,18 +22,27 @@ struct Process
     int res_b; /* requires resource b */
     int res_c; /* requires resource c */
     int res_d; /* requires resource d */
-};
+} typedef Process;
 
 /* linkedlist part */
 
-struct node
+struct
 {
-    struct Process *data;
-    struct node *next;
-};
+    Process *data;
+    struct Process_node *next;
+} typedef Process_node;
 
-void enqueue(struct node *start , struct Process *x);
-void traverse(struct node *start);
-void dequeue(struct node *start);
+struct
+{
+	int size;
+	Process_node *head;
+	Process_node *tail;
+} typedef Process_queue;
+
+Process_queue *init_pq();
+
+void enqueue(Process_queue *queue, Process *x);
+void traverse(Process_node *start);
+void dequeue(Process_queue *queue);
 
 #endif
