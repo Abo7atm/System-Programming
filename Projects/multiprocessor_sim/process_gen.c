@@ -9,7 +9,7 @@ int process_id = 1;
 int proba()
 {
     float proba = rand() / (float)RAND_MAX * 100.0;
-    if (proba > 90)
+    if (proba >= 90)
     {
         return 1;
     }
@@ -26,7 +26,7 @@ int resources_required()
     {
         if (proba())
         {
-            result = result & res[i];
+            result |= res[i];
         }
     }
     return result;
