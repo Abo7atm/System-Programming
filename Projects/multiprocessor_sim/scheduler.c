@@ -1,6 +1,6 @@
 #include "functions.h"
 
-/*
+/**
  * Schedule jobs and dispatches the job to the first available processor.
  * Checks the resources requirement of the jobs and reserve the jobs required resources before allowing the jobs to run.
  * If resources are not available, the jobs are put to sleep until the scheduler is notified by the memory manager / resource
@@ -8,7 +8,6 @@
  * When a job finishes its total execution time, it is removed from the queue, and from the system.
  * All the resources reserved by this job are released.
  * The scheduler does not implement pre-emtion.
- * 
  * */
 
 /**
@@ -29,17 +28,8 @@ void initialize_pqs()
     waiting_queue = init_pq();
 }
 
-// Probably no need for this function, as enqueue handles allocation memory for process_node
-// Process_node* init_process_node(Process *process)
-// {
-//     Process_node *result = (Process_node *) malloc(sizeof(Process_node));
-//     result->data = process;
-//     result->next = NULL;
-
-//     return result;
-// }
-
 /* insert new processes into job_queue */
+// TODO: return int as an indicator of successful insertion or error.
 void insert_job_queue(Process **processes, int n_processes)
 {
     Process_node *temp;
@@ -49,14 +39,16 @@ void insert_job_queue(Process **processes, int n_processes)
     }
 }
 
-/** takes jobs from job_queue, insert them into memroy (ready_queue)
+/** 
+ * takes jobs from job_queue, insert them into memroy (ready_queue)
  * aka long term scheduler
  * 
  * Initial classification:
  * if process requires more than one IO resource,
  * it's considered an IO bound process,
- * otherwise, it's a cpu bound process. */
-void insert_ready_queue(Process *process)
+ * otherwise, it's a cpu bound process. 
+ * */
+int insert_ready_queue(Process *new_job)
 {
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
@@ -64,34 +56,44 @@ void insert_ready_queue(Process *process)
     if (job_queue->size == 0)
     {
         printf("No jobs available\n");
-        return;
+        return -1;
     }
     else if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
     {
         printf("No enough memeory for job\n");
-        return;
+        return -1;
+    }
+    /**
+     * Compare number of IO jobs vs CPU jobs.
+     * Initially, if long term scheduler faces a problem with choosing a job,
+     * it'll just stop selecting jobs.
+     * */
+    else if (((IO_load / CPU_load) < 0.7) || ((CPU_load / IO_load) < 0.7))
+    {
+        printf("Imbalanced jobs\n");
+        return -1;
     }
 
     Process_node *temp = job_queue->head;
     Process *d = temp->data;
 
+    /* count number of resources requried to determine whether IO bound or not */
     count_resources = d->res_a + d->res_b + d->res_c + d->res_d;
 
-    enqueue(ready_queue, process);
-    
-    current_memory_usage += process->mem;
+    enqueue(ready_queue, new_job);
+    current_memory_usage += new_job->mem;
 
+    /* if jo requires 2 or more resources, it is IO bound */
     if (count_resources > 1)
     {
-        /** check IO_load, and compare to CPU_load,
-         * if process can be 
-         */
         IO_load++;
     }
     else
     {
         CPU_load++;
     }
+
+    return 0;
 }
 
 /* dispatch process to CPU */
