@@ -30,8 +30,47 @@ Process_queue *init_pq()
     return pq;
 }
 
+int proba()
+{
+    float proba = rand() / (float)RAND_MAX * 100.0;
+    if (proba >= 90)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int resources_required()
+{
+    int res[] = {0b0001, 0b0010, 0b0100, 0b1000};
+
+    int result = 0;
+
+    for (int i=0; i<4; i++)
+    {
+        if (proba())
+        {
+            result |= res[i];
+        }
+    }
+    return result;
+}
+
+void test_resources_required()
+{
+    for (int i=0; i<50; i++)
+    {
+        printf("%d:\tresources required: %d\n", i, resources_required());
+    }
+}
+
 int main()
 {
+    srand(time(NULL));
+
+    test_resources_required();
+    exit(0);
+
     Process_queue *long_term;
     long_term = init_pq();
 

@@ -6,7 +6,7 @@ int process_id = 1;
  * probability generator for
  * resources required by process
 */
-float proba()
+int proba()
 {
     float proba = rand() / (float)RAND_MAX * 100.0;
     if (proba > 90)
@@ -14,6 +14,22 @@ float proba()
         return 1;
     }
     return 0;
+}
+
+int resources_required()
+{
+    int *res = {0b0001, 0b0010, 0b0100, 0b1000};
+
+    int result = 0;
+
+    for (int i=0; i<4; i++)
+    {
+        if (proba())
+        {
+            result = result & res[i];
+        }
+    }
+    return result;
 }
 
 /**
