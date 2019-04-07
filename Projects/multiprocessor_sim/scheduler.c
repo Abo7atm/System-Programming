@@ -13,7 +13,7 @@
 /**
  * job_queue: all jobs in the system
  * ready_queue: jobs residing in memory
- * waiting_queue: jobs blocked waitng for IO
+ * waiting_queue: jobs waitng for IO
  * */
 
 #define MAX_MEMORY 2000
@@ -63,12 +63,13 @@ int insert_ready_queue(Process *new_job)
         printf("No enough memeory for job\n");
         return -1;
     }
+
     /**
      * Compare number of IO jobs vs CPU jobs.
      * Initially, if long term scheduler faces a problem with choosing a job,
      * it'll just stop selecting jobs.
      * */
-    else if (((IO_load / CPU_load) < 0.7) || ((CPU_load / IO_load) < 0.7))
+    else if (CPU_load > ((IO_load + 1) * 4))
     {
         printf("Imbalanced jobs\n");
         return -1;
@@ -97,16 +98,25 @@ int insert_ready_queue(Process *new_job)
 }
 
 /* dispatch process to CPU */
-void dispatch();
+/* does dispatch receive a process or should it dequeue from ready_queue? */
+int dispatch(Process *running_process)
+{
+    int actual_cpu_time = (rand() % burst) + 1;
+    running_process->p_time -= actual_cpu_time;
+    return actual_cpu_time;
+}
 
 /* check resources the process requires */
 int check_resources();
 
 /* if process requires unavailable resources */
-int wait();
+void wait(Process* waiting_process)
+{
+    enqueue(waiting_queue, waiting_process);
+}
 
 /* when a process finished all execution */
-int remove();
-
-/* handling pre emption */
-int interrupt();
+int remove(Process *is_it_finished)
+{
+    /* release resources */
+}
