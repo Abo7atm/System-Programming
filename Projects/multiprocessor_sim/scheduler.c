@@ -30,12 +30,12 @@ void initialize_pqs()
 
 /* insert new processes into job_queue */
 // TODO: return int as an indicator of successful insertion or error.
-void insert_job_queue(Process **processes, int n_processes)
+void insert_job_queue()
 {
     Process_node *temp;
-    for (int i = 0; i < n_processes; i++)
+    while (1)
     {
-        enqueue(job_queue, processes[i]);
+        generator(job_queue);
     }
 }
 
@@ -48,7 +48,7 @@ void insert_job_queue(Process **processes, int n_processes)
  * it's considered an IO bound process,
  * otherwise, it's a cpu bound process. 
  * */
-int insert_ready_queue(Process *new_job)
+void insert_ready_queue(Process *new_job)
 {
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
@@ -56,12 +56,12 @@ int insert_ready_queue(Process *new_job)
     if (job_queue->size == 0)
     {
         printf("No jobs available\n");
-        return -1;
+        return;
     }
     else if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
     {
         printf("No enough memeory for job\n");
-        return -1;
+        return;
     }
 
     /**
@@ -72,29 +72,27 @@ int insert_ready_queue(Process *new_job)
     else if (CPU_load > ((IO_load + 1) * 4))
     {
         printf("Imbalanced jobs\n");
-        return -1;
+        return;
     }
 
-    Process_node *temp = job_queue->head;
-    Process *d = temp->data;
+    Process *d = new_job;
 
     /* count number of resources requried to determine whether IO bound or not */
     // count_resources = d->res_a + d->res_b + d->res_c + d->res_d;
 
-    enqueue(ready_queue, new_job);
-    current_memory_usage += new_job->mem;
-
     /* if jo requires 2 or more resources, it is IO bound */
-    if (count_resources > 0)
+    if (count_resources > 0 && check_resource_availablity(d))
     {
+        enqueue(ready_queue, new_job);
+        current_memory_usage += new_job->mem;
         IO_load++;
     }
     else
     {
+        enqueue(ready_queue, new_job);
+        current_memory_usage += new_job->mem;
         CPU_load++;
     }
-
-    return 0;
 }
 
 /* dispatch process to CPU */
@@ -106,17 +104,52 @@ int dispatch(Process *running_process)
     return actual_cpu_time;
 }
 
-/* check resources the process requires */
-int check_resources();
+/* when a process finished all execution */
+int remove_process(Process *finished)
+{
+    /* release resources */
+    release_resource(finished->resources_required);
 
-// /* if process requires unavailable resources */
-// void wait(Process* waiting_process)
-// {
-//     enqueue(waiting_queue, waiting_process);
-// }
+    /* log this action */
+    // some_logging_function(finished);
 
-// /* when a process finished all execution */
-// int remove(Process *is_it_finished)
-// {
-//     /* release resources */
-// }
+    /* remove from memory */
+    free(finished);
+}
+
+/**
+ * round_robin() only interacts with ready_queue
+ * Takes process at head of ready_queue, "runs" it by
+ * subtracting a random number of unit time, if random = 10, then this
+ * the process has exhausted all of it's quantum, else, process has been
+ * interrupted.
+ *  */
+void run_process(Process *running)
+{
+    int run_time = (rand() % 10) + 10;
+
+    if (run_time > running->p_time)
+    {
+        running->p_time=0;
+    }
+
+    running->p_time -= run_time;
+
+    // if(run_time == 10)
+    // {
+    //     /* log as not interrupted*/
+    // }
+    // else
+    // {
+    //      /* log as interrupted*/
+    // }
+}
+
+void round_robin()
+{
+    Process *to_run;
+    to_run = dequeue(ready_queue);
+    run_process(to_run);
+    enqueue(ready_queue, to_run);
+
+}

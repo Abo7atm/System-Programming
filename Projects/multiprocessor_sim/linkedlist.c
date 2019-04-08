@@ -63,7 +63,7 @@ Process* dequeue(Process_queue *queue)
         return NULL;
     }
 
-    Process_node *result;
+    Process *result;
 
     result = queue->head->data;
     queue->head = queue->head->next;
