@@ -79,13 +79,13 @@ int insert_ready_queue(Process *new_job)
     Process *d = temp->data;
 
     /* count number of resources requried to determine whether IO bound or not */
-    count_resources = d->res_a + d->res_b + d->res_c + d->res_d;
+    // count_resources = d->res_a + d->res_b + d->res_c + d->res_d;
 
     enqueue(ready_queue, new_job);
     current_memory_usage += new_job->mem;
 
     /* if jo requires 2 or more resources, it is IO bound */
-    if (count_resources > 1)
+    if (count_resources > 0)
     {
         IO_load++;
     }
@@ -109,14 +109,14 @@ int dispatch(Process *running_process)
 /* check resources the process requires */
 int check_resources();
 
-/* if process requires unavailable resources */
-void wait(Process* waiting_process)
-{
-    enqueue(waiting_queue, waiting_process);
-}
+// /* if process requires unavailable resources */
+// void wait(Process* waiting_process)
+// {
+//     enqueue(waiting_queue, waiting_process);
+// }
 
-/* when a process finished all execution */
-int remove(Process *is_it_finished)
-{
-    /* release resources */
-}
+// /* when a process finished all execution */
+// int remove(Process *is_it_finished)
+// {
+//     /* release resources */
+// }

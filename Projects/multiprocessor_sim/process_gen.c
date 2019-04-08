@@ -18,15 +18,15 @@ int proba()
 
 int resources_required()
 {
-    int *res = {0b0001, 0b0010, 0b0100, 0b1000};
+    int resources[] = {RESOURCE_A, RESOURCE_B, RESOURCE_C, RESOURCE_D};
 
     int result = 0;
 
-    for (int i=0; i<4; i++)
+    for (int i = 0; i < 4; i++)
     {
         if (proba())
         {
-            result |= res[i];
+            result |= resources[i];
         }
     }
     return result;
@@ -35,7 +35,7 @@ int resources_required()
 /**
  * Generates a process
  * */
-Process process_gen()
+Process *process_gen()
 {
     time_t curtime;
     time(&curtime);
@@ -44,7 +44,15 @@ Process process_gen()
 
     p_time = (rand() % (1000 - 10 + 1)) + 10;
     mem = (rand() % (100 - 1 + 1)) + 1;
-    Process r = { process_id++, ctime(&curtime), p_time, mem, proba(), proba(), proba(), proba() };
+
+    Process *r = (Process *)malloc(sizeof(Process));
+
+    r->id = process_id++;
+    r->creation_date = ctime(&curtime);
+    r->p_time = p_time;
+    r->mem = mem;
+    r->resources_required = resources_required();
+
     return r;
 }
 
@@ -54,13 +62,13 @@ Process process_gen()
 */
 int generator(Process_queue *queue)
 {
-    int n_processes = rand() % (5 + 1);
-    Process t;
+    int n_processes = (rand() % (5 + 1));
+    Process *t;
 
     for (int i = 0; i < n_processes + 1; i++)
     {
         t = process_gen();
-        enqueue(queue, &t);
+        enqueue(queue, t);
     }
 
     return n_processes;

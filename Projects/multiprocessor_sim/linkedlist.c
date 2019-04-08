@@ -2,11 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// void insert_at_end(int);
-// void traverse();
-// void delete_from_begin();
-// void delete_from_end();
-
 Process_queue *init_pq()
 {
     Process_queue *pq;
@@ -17,7 +12,7 @@ Process_queue *init_pq()
     return pq;
 }
 
-void enqueue(Process_queue *queue, Process *x)
+void enqueue(Process_queue *queue, Process* x)
 {
     Process_node *t;
 
@@ -27,13 +22,13 @@ void enqueue(Process_queue *queue, Process *x)
 
     if (queue->head == NULL)
     {
-        queue->head = x;
+        queue->head = t;
         queue->tail = queue->head;
         return;
     }
 
-    queue->tail->next = x;
-    queue->tail = x;
+    queue->tail->next = t;
+    queue->tail = t;
     /* upon successful enqueue, increase the size */
     queue->size++;
 }
@@ -59,7 +54,7 @@ void traverse(Process_node *start)
     printf("%d\n", t->data);
 }
 
-Process_node* dequeue(Process_queue *queue)
+Process* dequeue(Process_queue *queue)
 {
     /* check if queue is empty */
     if (queue->head == NULL)
@@ -70,7 +65,7 @@ Process_node* dequeue(Process_queue *queue)
 
     Process_node *result;
 
-    result = queue->head;
+    result = queue->head->data;
     queue->head = queue->head->next;
 
     /* upon successful dequeue decrease size */

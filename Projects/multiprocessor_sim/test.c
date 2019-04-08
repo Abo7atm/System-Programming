@@ -66,6 +66,12 @@ void test_resources_required()
 
 int main()
 {
+    Process wow = { 42, 69 };
+    Process *t = &wow;
+    printf("address: %d\n", t);
+
+    exit(0);
+
     srand(time(NULL));
 
     test_resources_required();

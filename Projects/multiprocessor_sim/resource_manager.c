@@ -59,8 +59,15 @@ int release_resource(int resource_released)
             {
                 resources[i] = 0;
                 users[i] = 0;
+                notify_scheduler();
             }
         }
     }
     return 0;
+}
+
+void notify_scheduler()
+{
+    /* signal the scheduler */
+    /* I think there should be a lot of signal to achieve the behavior desired. */
 }

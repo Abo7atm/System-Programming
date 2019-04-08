@@ -1,38 +1,34 @@
-#ifndef FUNCTIONS_H_INCLUDED
-#define FUNCTIONS_H_INCLUDED
+// #ifndef FUNCTIONS_H_INCLUDED
+// #define FUNCTIONS_H_INCLUDED
 
-#include "functions.h"
+// #include "functions.h"
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
 
+/* Process_gen part */
+
 extern int process_id;
 
-void prnt(const char* string);
-struct Process process_gen();
-int generator(Process_queue *queue);
 /* bitwise for res? */
-struct
+struct process
 {
     int id;
     char* creation_date;
     int p_time; /* required processing time */
     int mem; /* required memory */
-    int res_a; /* requires resource a */
-    int res_b; /* requires resource b */
-    int res_c; /* requires resource c */
-    int res_d; /* requires resource d */
+    int resources_required; /* 4 bit binary created with bitwise or */
 } typedef Process;
 
 /* linkedlist part */
 
-struct
+struct process_node
 {
     Process *data;
-    struct Process_node *next;
+    struct Process_node* next;
 } typedef Process_node;
 
-struct
+struct process_queue
 {
 	int size;
 	Process_node *head;
@@ -41,8 +37,18 @@ struct
 
 Process_queue *init_pq();
 
-void enqueue(Process_queue *queue, Process *x);
+void enqueue(Process_queue *queue, Process* x);
 void traverse(Process_node *start);
-void dequeue(Process_queue *queue);
+Process* dequeue(Process_queue *queue);
 
-#endif
+/* resource manager part */
+#define RESOURCE_A 0b0001
+#define RESOURCE_B 0b0010
+#define RESOURCE_C 0b0100
+#define RESOURCE_D 0b1000
+
+
+
+Process* process_gen();
+int generator(Process_queue *queue);
+// #endif
