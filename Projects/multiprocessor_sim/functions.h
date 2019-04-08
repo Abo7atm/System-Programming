@@ -14,9 +14,9 @@ extern int process_id;
 struct process
 {
     int id;
-    char* creation_date;
-    int p_time; /* required processing time */
-    int mem; /* required memory */
+    char *creation_date;
+    int p_time;             /* required processing time */
+    int mem;                /* required memory */
     int resources_required; /* 4 bit binary created with bitwise or */
 } typedef Process;
 
@@ -25,21 +25,21 @@ struct process
 struct process_node
 {
     Process *data;
-    struct Process_node* next;
+    struct Process_node *next;
 } typedef Process_node;
 
 struct process_queue
 {
-	int size;
-	Process_node *head;
-	Process_node *tail;
+    int size;
+    Process_node *head;
+    Process_node *tail;
 } typedef Process_queue;
 
 Process_queue *init_pq();
 
-void enqueue(Process_queue *queue, Process* x);
+void enqueue(Process_queue *queue, Process *x);
 void traverse(Process_node *start);
-Process* dequeue(Process_queue *queue);
+Process *dequeue(Process_queue *queue);
 
 /* resource manager part */
 #define RESOURCE_A 0b0001
@@ -47,8 +47,9 @@ Process* dequeue(Process_queue *queue);
 #define RESOURCE_C 0b0100
 #define RESOURCE_D 0b1000
 
+int check_resource_availablity(Process *user);
+void release_resource(int resource_released);
 
-
-Process* process_gen();
+Process *process_gen();
 int generator(Process_queue *queue);
 // #endif

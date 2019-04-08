@@ -16,10 +16,11 @@ int resources_in_binary[] = {0b0001, 0b0010, 0b0100, 0b1000};
  * how to notify scheduler?
  * */
 
-int check_resource_availablity(int resource_required, int pid)
+int check_resource_availablity(Process *user)
 {
+    int resource_required = user->resources_required, pid = user->id;
 
-    for (int i=0; i<4; i++)
+    for (int i = 0; i < 4; i++)
     {
         /* check what resources are requested */
         if (resource_required & resources_in_binary[i])
@@ -42,9 +43,9 @@ int check_resource_availablity(int resource_required, int pid)
     return 0;
 }
 
-int release_resource(int resource_released)
+void release_resource(int resource_released)
 {
-    for (int i=0; i<4; i++)
+    for (int i = 0; i < 4; i++)
     {
         if (resource_released & resources_in_binary[i])
         {
@@ -52,22 +53,21 @@ int release_resource(int resource_released)
             if (resources[i] == 0)
             {
                 printf("Resource is already free!\n");
-                return -1;
             }
             /* release resource */
             else
             {
                 resources[i] = 0;
                 users[i] = 0;
-                notify_scheduler();
             }
         }
     }
-    return 0;
 }
 
-void notify_scheduler()
-{
-    /* signal the scheduler */
-    /* I think there should be a lot of signal to achieve the behavior desired. */
-}
+// I misunderstood this, the scheduler should notify the resource manager of a death of a process
+// and the resource manager should release those resources held by the "late" process
+// void notify_scheduler()
+// {
+//     /* signal the scheduler */
+//     /* I think there should be a lot of signaling to achieve the behavior desired. */
+// }
