@@ -6,10 +6,6 @@
 #include <time.h>
 #include <stdio.h>
 
-/* Process_gen part */
-
-extern int process_id;
-
 /* bitwise for res? */
 struct process
 {
@@ -19,6 +15,7 @@ struct process
     int mem;                /* required memory */
     int resources_required; /* 4 bit binary created with bitwise or */
 } typedef Process;
+
 
 /* linkedlist part */
 
@@ -41,6 +38,7 @@ void enqueue(Process_queue *queue, Process *x);
 void traverse(Process_node *start);
 Process *dequeue(Process_queue *queue);
 
+
 /* resource manager part */
 #define RESOURCE_A 0b0001
 #define RESOURCE_B 0b0010
@@ -50,6 +48,19 @@ Process *dequeue(Process_queue *queue);
 int check_resource_availablity(Process *user);
 void release_resource(int resource_released);
 
+
+/* Process_gen part */
+extern int process_id;
+
 Process *process_gen();
 int generator(Process_queue *queue);
+
+
+/* scheduler part */
+void round_robin();
+void insert_ready_queue(Process *new_job);
+void insert_job_queue();
+void initialize_pqs();
+
+
 // #endif

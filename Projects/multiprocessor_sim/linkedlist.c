@@ -22,6 +22,7 @@ void enqueue(Process_queue *queue, Process* x)
 
     if (queue->head == NULL)
     {
+        printf("head is NOT NULL anymore\n");
         queue->head = t;
         queue->tail = queue->head;
         return;

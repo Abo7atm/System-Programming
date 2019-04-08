@@ -33,10 +33,11 @@ void initialize_pqs()
 void insert_job_queue()
 {
     Process_node *temp;
-    while (1)
+    for(int i = 0; i < 5; i++)
     {
         generator(job_queue);
     }
+    printf("job queue size: %d\n", job_queue->size);
 }
 
 /** 
@@ -86,12 +87,14 @@ void insert_ready_queue(Process *new_job)
         enqueue(ready_queue, new_job);
         current_memory_usage += new_job->mem;
         IO_load++;
+        printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
     }
     else
     {
         enqueue(ready_queue, new_job);
         current_memory_usage += new_job->mem;
         CPU_load++;
+        printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
     }
 }
 
@@ -123,6 +126,11 @@ int remove_process(Process *finished)
  * subtracting a random number of unit time, if random = 10, then this
  * the process has exhausted all of it's quantum, else, process has been
  * interrupted.
+ * Diffrentiate between IO bound and CPU bound jobs.
+ * if (jobs is io bound)
+ *  run for 1 ms and generate a random wait time that represents IO wait time.
+ * else
+ *  run as implemented below
  *  */
 void run_process(Process *running)
 {
@@ -135,14 +143,6 @@ void run_process(Process *running)
 
     running->p_time -= run_time;
 
-    // if(run_time == 10)
-    // {
-    //     /* log as not interrupted*/
-    // }
-    // else
-    // {
-    //      /* log as interrupted*/
-    // }
 }
 
 void round_robin()
@@ -152,4 +152,12 @@ void round_robin()
     run_process(to_run);
     enqueue(ready_queue, to_run);
 
+}
+
+void long_term_sched()
+{
+    for (int i = 0; i<10; i++)
+    {
+        insert_ready_queue(dequeue(job_queue));
+    }
 }

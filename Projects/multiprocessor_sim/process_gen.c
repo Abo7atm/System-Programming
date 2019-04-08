@@ -53,6 +53,10 @@ Process *process_gen()
     r->mem = mem;
     r->resources_required = resources_required();
 
+    printf("JOB CREATED:\n");
+    printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
+        r->id, r->p_time, r->mem, r->resources_required);
+
     return r;
 }
 
@@ -69,6 +73,7 @@ int generator(Process_queue *queue)
     {
         t = process_gen();
         enqueue(queue, t);
+        printf("Process ID: %d inserted into JOB QUEUE\n", t->id);
     }
 
     return n_processes;

@@ -1,19 +1,26 @@
 #include "functions.h"
 
+void start()
+{
+    initialize_pqs();
+    insert_job_queue();
+    
+    round_robin();
+}
+
 int main()
 {
+    srand(time(NULL));
+
+    start();
+    exit(NULL);
+
     Process *ptr, *b;
     Process_queue *queue;
     int size;
 
-    queue = init_pq();
-
-    // queue = init();
-
-    // printf("size of queue: %d", queue->size);
-    // exit(0);
-
-    srand(time(NULL));
+    exit(0);
+    
     ptr = (Process *)malloc(sizeof(Process) * 5);
     size = generator(queue);
 
