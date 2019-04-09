@@ -58,7 +58,7 @@ int generator(Process_queue *queue);
 
 /* scheduler part */
 void round_robin();
-void insert_ready_queue(Process *new_job);
+void insert_ready_queue();
 void insert_job_queue();
 void initialize_pqs();
 

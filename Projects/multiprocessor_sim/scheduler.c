@@ -33,7 +33,7 @@ void initialize_pqs()
 void insert_job_queue()
 {
     Process_node *temp;
-    for(int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++)
     {
         generator(job_queue);
     }
@@ -45,56 +45,63 @@ void insert_job_queue()
  * aka long term scheduler
  * 
  * Initial classification:
- * if process requires more than one IO resource,
+ * if process requires one or more IO resources,
  * it's considered an IO bound process,
  * otherwise, it's a cpu bound process. 
  * */
-void insert_ready_queue(Process *new_job)
+void insert_ready_queue()
 {
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
 
-    if (job_queue->size == 0)
+    while (1)
     {
-        printf("No jobs available\n");
-        return;
-    }
-    else if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
-    {
-        printf("No enough memeory for job\n");
-        return;
-    }
+        if (job_queue->size == 0)
+        {
+            printf("No jobs available\n");
+            sleep(1);
+            continue;
+        }
 
-    /**
-     * Compare number of IO jobs vs CPU jobs.
-     * Initially, if long term scheduler faces a problem with choosing a job,
-     * it'll just stop selecting jobs.
-     * */
-    else if (CPU_load > ((IO_load + 1) * 4))
-    {
-        printf("Imbalanced jobs\n");
-        return;
-    }
+        Process *new_job = dequeue(job_queue);
 
-    Process *d = new_job;
+        if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
+        {
+            printf("No enough memeory for job\n");
+            enqueue(job_queue, new_job);
+            sleep(1);
+            continue;
+        }
 
-    /* count number of resources requried to determine whether IO bound or not */
-    // count_resources = d->res_a + d->res_b + d->res_c + d->res_d;
+        /**
+         * Compare number of IO jobs vs CPU jobs.
+         * Initially, if long term scheduler faces a problem with choosing a job,
+         * it'll just stop selecting jobs.
+         * */
+        else if (CPU_load > ((IO_load + 1) * 4))
+        {
+            printf("Imbalanced jobs\n");
+            enqueue(job_queue, new_job);
+            sleep(1);
+            continue;
+        }
 
-    /* if jo requires 2 or more resources, it is IO bound */
-    if (count_resources > 0 && check_resource_availablity(d))
-    {
-        enqueue(ready_queue, new_job);
-        current_memory_usage += new_job->mem;
-        IO_load++;
-        printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
-    }
-    else
-    {
-        enqueue(ready_queue, new_job);
-        current_memory_usage += new_job->mem;
-        CPU_load++;
-        printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
+        /* if job requires 1 or more resources, it is IO bound */
+        if (count_resources > 0 && check_resource_availablity(new_job))
+        {
+            enqueue(ready_queue, new_job);
+            current_memory_usage += new_job->mem;
+            IO_load++;
+            printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
+        }
+        else
+        {
+            enqueue(ready_queue, new_job);
+            current_memory_usage += new_job->mem;
+            CPU_load++;
+            printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
+        }
+        sleep(1);
     }
 }
 
@@ -138,11 +145,10 @@ void run_process(Process *running)
 
     if (run_time > running->p_time)
     {
-        running->p_time=0;
+        running->p_time = 0;
     }
 
     running->p_time -= run_time;
-
 }
 
 void round_robin()
@@ -151,12 +157,11 @@ void round_robin()
     to_run = dequeue(ready_queue);
     run_process(to_run);
     enqueue(ready_queue, to_run);
-
 }
 
 void long_term_sched()
 {
-    for (int i = 0; i<10; i++)
+    for (int i = 0; i < 10; i++)
     {
         insert_ready_queue(dequeue(job_queue));
     }

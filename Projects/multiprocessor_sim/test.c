@@ -64,8 +64,24 @@ void test_resources_required()
     }
 }
 
+void loop_continue()
+{
+    int i=0;
+    while (i<10)
+    {
+        if (i++%2==0)
+        {
+            continue;
+        }
+        printf("Odd number\n");
+    }
+}
+
 int main()
 {
+    loop_continue();
+    exit(NULL);
+
     Process wow = { 42, 69 };
     Process *t = &wow;
     printf("address: %d\n", t);

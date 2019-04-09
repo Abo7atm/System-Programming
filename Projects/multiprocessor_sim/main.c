@@ -1,10 +1,9 @@
 #include "functions.h"
 
-void start()
+void start() /* not init */
 {
     initialize_pqs();
     insert_job_queue();
-    
     round_robin();
 }
 
