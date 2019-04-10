@@ -29,8 +29,14 @@ int check_resource_availablity(Process *user)
             if (resources[i])
             {
                 printf("resource unavailable!\n");
-                return -1;
+                return 0;
             }
+            /**
+             * fix process requiring two resources but only one is available. 
+             * if process P reserves resource a but resource b is not available,
+             * resource a will be reserved for a waiting process.
+             * you can call release resource.
+             * */
             else
             {
                 /* flag resource as being used */
@@ -40,7 +46,7 @@ int check_resource_availablity(Process *user)
             }
         }
     }
-    return 0;
+    return 1;
 }
 
 void release_resource(int resource_released)
@@ -63,11 +69,3 @@ void release_resource(int resource_released)
         }
     }
 }
-
-// I misunderstood this, the scheduler should notify the resource manager of a death of a process
-// and the resource manager should release those resources held by the "late" process
-// void notify_scheduler()
-// {
-//     /* signal the scheduler */
-//     /* I think there should be a lot of signaling to achieve the behavior desired. */
-// }

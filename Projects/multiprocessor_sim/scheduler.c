@@ -32,7 +32,6 @@ void initialize_pqs()
 // TODO: return int as an indicator of successful insertion or error.
 void insert_job_queue()
 {
-    Process_node *temp;
     for (int i = 0; i < 5; i++)
     {
         generator(job_queue);
@@ -94,7 +93,7 @@ void insert_ready_queue()
             IO_load++;
             printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
         }
-        else
+        else /* if CPU bound */
         {
             enqueue(ready_queue, new_job);
             current_memory_usage += new_job->mem;
@@ -103,15 +102,6 @@ void insert_ready_queue()
         }
         sleep(1);
     }
-}
-
-/* dispatch process to CPU */
-/* does dispatch receive a process or should it dequeue from ready_queue? */
-int dispatch(Process *running_process)
-{
-    int actual_cpu_time = (rand() % burst) + 1;
-    running_process->p_time -= actual_cpu_time;
-    return actual_cpu_time;
 }
 
 /* when a process finished all execution */
@@ -127,6 +117,19 @@ int remove_process(Process *finished)
     free(finished);
 }
 
+int run_process(Process *running)
+{
+    int run_time = (rand() % 10) + 10; /* random number between 1 and 10 */
+
+    if (run_time > running->p_time)
+    {
+        running->p_time = 0;
+        return 0;
+    }
+
+    running->p_time -= run_time;
+}
+
 /**
  * round_robin() only interacts with ready_queue
  * Takes process at head of ready_queue, "runs" it by
@@ -139,18 +142,6 @@ int remove_process(Process *finished)
  * else
  *  run as implemented below
  *  */
-void run_process(Process *running)
-{
-    int run_time = (rand() % 10) + 10;
-
-    if (run_time > running->p_time)
-    {
-        running->p_time = 0;
-    }
-
-    running->p_time -= run_time;
-}
-
 void round_robin()
 {
     Process *to_run;

@@ -24,11 +24,11 @@ void enqueue(Process_queue *queue, Process* x)
     {
         printf("head is NOT NULL anymore\n");
         queue->head = t;
-        queue->tail = queue->head;
+        queue->tail = t;
         return;
     }
 
-    queue->tail->next = t;
+    queue->tail->next = t; 
     queue->tail = t;
     /* upon successful enqueue, increase the size */
     queue->size++;

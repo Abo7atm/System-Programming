@@ -42,8 +42,8 @@ Process *process_gen()
 
     int p_time, mem, c_date;
 
-    p_time = (rand() % (1000 - 10 + 1)) + 10;
-    mem = (rand() % (100 - 1 + 1)) + 1;
+    p_time = (rand() % (1000 - 10 + 1)) + 10; /* random number between 10 and 1000 */
+    mem = (rand() % (100 - 1 + 1)) + 1; /* random number between 1 and 100 */
 
     Process *r = (Process *)malloc(sizeof(Process));
 
