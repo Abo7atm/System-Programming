@@ -52,6 +52,7 @@ Process *process_gen()
     r->p_time = p_time;
     r->mem = mem;
     r->resources_required = resources_required();
+    r->wait_time = 0;
 
     printf("JOB CREATED:\n");
     printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",

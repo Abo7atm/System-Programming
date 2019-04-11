@@ -14,6 +14,7 @@ struct process
     int p_time;             /* required processing time */
     int mem;                /* required memory */
     int resources_required; /* 4 bit binary created with bitwise or */
+    int wait_time;
 } typedef Process;
 
 

@@ -1,4 +1,5 @@
 #include "functions.h"
+#include <pthread.h>
 
 /**
  * Schedule jobs and dispatches the job to the first available processor.
@@ -19,7 +20,8 @@
 #define MAX_MEMORY 2000
 
 Process_queue *job_queue, *ready_queue, *waiting_queue;
-int burst = 10, current_memory_usage = 0, IO_load, CPU_load;
+int burst = 10, current_memory_usage = 0, IO_load, CPU_load, total_load;
+pthread_mutex_t lock;
 
 void initialize_pqs()
 {
@@ -114,6 +116,7 @@ int remove_process(Process *finished)
     // some_logging_function(finished);
 
     /* remove from memory */
+    current_memory_usage -= finished->mem;
     free(finished);
 }
 
@@ -126,8 +129,21 @@ int run_process(Process *running)
         running->p_time = 0;
         return 0;
     }
-
     running->p_time -= run_time;
+    sleep(run_time / 1000);
+}
+
+void run2(Process *run_this)
+{
+    int num_processors = 2;
+
+    pthread_t thread1, thread2;
+    pthread_mutex_init(&lock, NULL);
+
+    pthread_create(&thread1, NULL, round_robin, NULL);
+    pthread_create(&thread2, NULL, round_robin, NULL);
+
+    pthread_mutex_destroy(&lock);
 }
 
 /**
@@ -144,8 +160,55 @@ int run_process(Process *running)
  *  */
 void round_robin()
 {
-    Process *process_to_run;
-    process_to_run = dequeue(ready_queue);
-    run_process(process_to_run);
-    enqueue(ready_queue, process_to_run);
+    while (ready_queue->size != 0)
+    {
+        Process *process_to_run;
+
+        pthread_mutex_lock(&lock);
+        process_to_run = dequeue(ready_queue);
+        pthread_mutex_unlock(&lock);
+
+        run_process(process_to_run);
+
+        pthread_mutex_lock(&lock);
+        enqueue(ready_queue, process_to_run);
+        pthread_mutex_unlock(&lock);
+    }
+}
+
+void update_wait_time()
+{
+    Process_node *temp;
+    temp = waiting_queue->head;
+
+    while (temp->next != NULL)
+    {
+        temp->data->wait_time--;
+    }
+}
+
+/* Mid term scheduler */
+wait_queue_handler()
+{
+    while(1)
+    {
+        if (waiting_queue->size == 0)
+        {
+            printf("No waiting processes\n");
+            sleep(1);
+        }
+        Process_node *temp = waiting_queue->head;
+        while (temp->next != NULL)
+        {
+            if (temp->data->wait_time == 0)
+            {
+                /* mutex lock */
+                enqueue(ready_queue, temp->data);
+                /* mutex unlock */
+            }
+        }
+        /* sleep one tick */
+        update_wait_time();
+        sleep(1/1000);
+    }
 }

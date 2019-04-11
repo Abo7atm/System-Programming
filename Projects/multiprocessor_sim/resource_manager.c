@@ -5,7 +5,7 @@ int resources[] = {0, 0, 0, 0};
 /* array of jobs using resources */
 int users[] = {0, 0, 0, 0};
 /* for bitwise and */
-int resources_in_binary[] = {0b0001, 0b0010, 0b0100, 0b1000};
+int resources_in_binary[] = {RESOURCE_A, RESOURCE_B, RESOURCE_C, RESOURCE_D};
 
 /**
  * create a queue for each resource,
@@ -47,16 +47,25 @@ int check_resource_availablity(int resource_required)
     return 1;
 }
 
-void reserve_resources(int resources)
+void reserve_resources(Process *proc)
 {
-
+    int resource_required = proc->resources_required;
+    for (int i = 0; i < 4; i++)
+    {
+        /* check what resources are requested */
+        if (resource_required & resources_in_binary[i])
+        {
+            resources[i] = 1;
+            users[i] = proc->id;
+        }
+    }
 }
 
-void release_resource(int resource_released)
+void release_resource(int resource_to_release)
 {
     for (int i = 0; i < 4; i++)
     {
-        if (resource_released & resources_in_binary[i])
+        if (resource_to_release & resources_in_binary[i])
         {
             /* check if resource is not being used */
             if (resources[i] == 0)
