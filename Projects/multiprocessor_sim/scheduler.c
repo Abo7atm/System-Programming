@@ -86,7 +86,7 @@ void insert_ready_queue()
         }
 
         /* if job requires 1 or more resources, it is IO bound */
-        if (count_resources > 0 && check_resource_availablity(new_job))
+        if (count_resources > 0 && check_resource_availablity(new_job->resources_required))
         {
             enqueue(ready_queue, new_job);
             current_memory_usage += new_job->mem;
@@ -120,7 +120,7 @@ int remove_process(Process *finished)
 int run_process(Process *running)
 {
     int run_time = (rand() % 10) + 10; /* random number between 1 and 10 */
-
+    /* sleep the amout of run_time */
     if (run_time > running->p_time)
     {
         running->p_time = 0;
@@ -137,23 +137,15 @@ int run_process(Process *running)
  * the process has exhausted all of it's quantum, else, process has been
  * interrupted.
  * Diffrentiate between IO bound and CPU bound jobs.
- * if (jobs is io bound)
+ * if (jobs is io bound):
  *  run for 1 ms and generate a random wait time that represents IO wait time.
- * else
+ * else:
  *  run as implemented below
  *  */
 void round_robin()
 {
-    Process *to_run;
-    to_run = dequeue(ready_queue);
-    run_process(to_run);
-    enqueue(ready_queue, to_run);
-}
-
-void long_term_sched()
-{
-    for (int i = 0; i < 10; i++)
-    {
-        insert_ready_queue(dequeue(job_queue));
-    }
+    Process *process_to_run;
+    process_to_run = dequeue(ready_queue);
+    run_process(process_to_run);
+    enqueue(ready_queue, process_to_run);
 }

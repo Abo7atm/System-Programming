@@ -16,10 +16,8 @@ int resources_in_binary[] = {0b0001, 0b0010, 0b0100, 0b1000};
  * how to notify scheduler?
  * */
 
-int check_resource_availablity(Process *user)
+int check_resource_availablity(int resource_required)
 {
-    int resource_required = user->resources_required, pid = user->id;
-
     for (int i = 0; i < 4; i++)
     {
         /* check what resources are requested */
@@ -37,16 +35,21 @@ int check_resource_availablity(Process *user)
              * resource a will be reserved for a waiting process.
              * you can call release resource.
              * */
-            else
-            {
-                /* flag resource as being used */
-                resources[i] = 1;
-                /* log job id using resource */
-                users[i] = pid;
-            }
+            // else
+            // {
+            //     /* flag resource as being used */
+            //     resources[i] = 1;
+            //     /* log job id using resource */
+            //     users[i] = pid;
+            // }
         }
     }
     return 1;
+}
+
+void reserve_resources(int resources)
+{
+
 }
 
 void release_resource(int resource_released)

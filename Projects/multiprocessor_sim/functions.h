@@ -34,9 +34,9 @@ struct process_queue
 
 Process_queue *init_pq();
 
-void enqueue(Process_queue *queue, Process *x);
-void traverse(Process_node *start);
-Process *dequeue(Process_queue *queue);
+void enqueue(Process_queue *, Process *);
+void traverse(Process_node *);
+Process *dequeue(Process_queue *);
 
 
 /* resource manager part */
@@ -45,15 +45,15 @@ Process *dequeue(Process_queue *queue);
 #define RESOURCE_C 0b0100
 #define RESOURCE_D 0b1000
 
-int check_resource_availablity(Process *user);
-void release_resource(int resource_released);
+int check_resource_availablity(int);
+void release_resource(int);
 
 
 /* Process_gen part */
 extern int process_id;
 
 Process *process_gen();
-int generator(Process_queue *queue);
+int generator(Process_queue *);
 
 
 /* scheduler part */
