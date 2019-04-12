@@ -58,6 +58,7 @@ void reserve_resources(Process *proc)
             resources[i] = 1;
             users[i] = proc->id;
         }
+        printf("-- Action: RR\t| Resoruce: %c\t| Stat: %d\n", i + 65, resources[i]); // RR => Resrouce Report
     }
 }
 

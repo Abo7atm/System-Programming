@@ -131,11 +131,13 @@ int dispatch(Process *running)
     // printf("this is dispatch\n");
     if (running->resources_required > 0)
     {
+        printf("-- Action: EXECUTE\t| Exec Time: %d\n", 1);
         // printf("This is IO job in CPU\n");
         running->p_time--;
+        running->wait_time = (rand() % 100) + 1; /* random number between 1 and 100 */
         /* mutex lock */
         enqueue(waiting_queue, running);
-        printf("-- Action: INSERT WQ\t| Process: %d\n",running->id);
+        printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", running->id, running->wait_time);
         /* mutex unlock */
         usleep(1000); /* int nanosleep(const struct timespec *rqtp, struct timespec *rmtp); */
         return 0;
@@ -154,6 +156,7 @@ int dispatch(Process *running)
     printf("-- Action: EXECUTE\t| Exec Time: %d\n", run_time);
     running->p_time -= run_time;
     usleep(run_time * 1000);
+    return running->p_time;
 }
 
 void run2()
@@ -176,7 +179,6 @@ void run3()
     round_robin();
 }
 
-
 /**
  * round_robin() only interacts with ready_queue
  * Takes process at head of ready_queue, "runs" it by
@@ -191,7 +193,7 @@ void run3()
  *  */
 void *round_robin()
 {
-    for(int i=0; i<15; i++)
+    for (int i = 0; i < 100; i++)
     {
         // printf("round robin point 1\n");
         Process *process_to_run;
@@ -202,10 +204,19 @@ void *round_robin()
         // pthread_mutex_unlock(&lock);
         // printf("round robin point 1\n");
 
-        dispatch(process_to_run);
+        /* if remaining execution time is 0 */
+        if (!dispatch(process_to_run))
+        {
+            printf("-- Action: REMOVE\t| Process: %d\n", process_to_run->id);
+            remove_process(process_to_run);
+        }
         // printf("round robin point 1\n");
         // pthread_mutex_lock(&lock);
-        enqueue(ready_queue, process_to_run);
+        else
+        {
+            enqueue(ready_queue, process_to_run);
+        }
+
         // pthread_mutex_unlock(&lock);
         // printf("round robin point 1\n");
     }
@@ -219,6 +230,11 @@ void update_wait_time()
     while (temp->next != NULL)
     {
         temp->data->wait_time--;
+        if (temp->data->wait_time <= 0)
+        {
+            enqueue(ready_queue, temp->data);
+            printf("-- Action: INSERT RQ\t| Process: %d\n", temp->data->id);
+        }
     }
 }
 

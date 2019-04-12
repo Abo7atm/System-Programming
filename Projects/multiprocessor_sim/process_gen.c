@@ -58,7 +58,7 @@ Process *process_gen()
     // printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
         // r->id, r->p_time, r->mem, r->resources_required);
 
-    printf("-- Action: CREATE\t| Process: %d\t| P_time: %d\n", process_id, p_time);
+    printf("-- Action: CREATE\t| Process: %d\t| Resources: %d\n", process_id, r->resources_required);
     return r;
 }
 
