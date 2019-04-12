@@ -20,7 +20,7 @@
 #define MAX_MEMORY 2000
 
 Process_queue *job_queue, *ready_queue, *waiting_queue;
-int burst = 10, current_memory_usage = 0, IO_load, CPU_load, total_load;
+int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
 pthread_mutex_t lock;
 
 void initialize_pqs()
@@ -114,8 +114,12 @@ void insert_ready_queue()
 /* when a process finished all execution */
 int remove_process(Process *finished)
 {
-    /* release resources */
-    release_resource(finished->resources_required);
+    if (finished->resources_required > 0)
+    {
+        printf("-- Action: RlsRsrc\t| Process: %d\n", finished->id);
+        /* release resources */
+        release_resource(finished->resources_required);
+    }
 
     /* log this action */
     // some_logging_function(finished);
@@ -140,12 +144,12 @@ int dispatch(Process *running)
         printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", running->id, running->wait_time);
         /* mutex unlock */
         usleep(1000); /* int nanosleep(const struct timespec *rqtp, struct timespec *rmtp); */
-        return 0;
+        return -1;
     }
     // printf("dispatch point 2\n");
 
     int run_time = (rand() % 10) + 10; /* random number between 1 and 10 */
-
+    burst = run_time;
     /* sleep the amout of run_time */
     // printf("dispatch point 3\n");
     if (run_time > running->p_time)
@@ -205,6 +209,7 @@ void *round_robin()
         // printf("round robin point 1\n");
 
         /* if remaining execution time is 0 */
+        /* ISSUE: IO Processes return 0 */
         if (!dispatch(process_to_run))
         {
             printf("-- Action: REMOVE\t| Process: %d\n", process_to_run->id);
@@ -216,24 +221,26 @@ void *round_robin()
         {
             enqueue(ready_queue, process_to_run);
         }
-
+        update_wait_time(burst);
         // pthread_mutex_unlock(&lock);
         // printf("round robin point 1\n");
     }
 }
 
-void update_wait_time()
+/* ISSUE: IO Processes will always run 1ms at a time because. */
+void update_wait_time(int time_update)
 {
     Process_node *temp;
     temp = waiting_queue->head;
-
+    printf("We are in wait update");
     while (temp->next != NULL)
     {
-        temp->data->wait_time--;
+
+        temp->data->wait_time -= time_update;
         if (temp->data->wait_time <= 0)
         {
             enqueue(ready_queue, temp->data);
-            printf("-- Action: INSERT RQ\t| Process: %d\n", temp->data->id);
+            printf("-- Action: INSERT RQ2\t| Process: %d\n", temp->data->id);
         }
     }
 }
@@ -259,7 +266,7 @@ void wait_queue_handler()
             }
         }
         /* sleep one tick */
-        update_wait_time();
+        // update_wait_time();
         sleep(1 / 1000);
     }
 }
