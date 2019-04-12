@@ -38,7 +38,7 @@ void insert_job_queue()
     {
         generator(job_queue);
     }
-    printf("job queue size: %d\n", job_queue->size);
+    // printf("job queue size: %d\n", job_queue->size);
 }
 
 /** 
@@ -55,7 +55,7 @@ void insert_ready_queue()
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
 
-    while (1)
+    for (int i = 0; i < 15; i++)
     {
         if (job_queue->size == 0)
         {
@@ -84,25 +84,30 @@ void insert_ready_queue()
             printf("Imbalanced jobs\n");
             enqueue(job_queue, new_job);
             sleep(1);
-            continue;
+            // continue;
+            break;
         }
 
         /* if job requires 1 or more resources, it is IO bound */
-        if (count_resources > 0 && check_resource_availablity(new_job->resources_required))
+        if (new_job->resources_required > 0 && check_resource_availablity(new_job->resources_required))
         {
             enqueue(ready_queue, new_job);
+            reserve_resources(new_job);
             current_memory_usage += new_job->mem;
             IO_load++;
-            printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
+            // printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
         }
         else /* if CPU bound */
         {
             enqueue(ready_queue, new_job);
             current_memory_usage += new_job->mem;
             CPU_load++;
-            printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
+            // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
-        sleep(1);
+        printf("-- Action: INSERT RQ\t| Process: %d\n", new_job->id);
+        // printf("Remaining jobs in job queue: %d\n", job_queue->size);
+        // printf("CPU Load: %d, IO Load: %d\n", CPU_load, IO_load);
+        usleep(1 / 100);
     }
 }
 
@@ -120,31 +125,57 @@ int remove_process(Process *finished)
     free(finished);
 }
 
-int run_process(Process *running)
+int dispatch(Process *running)
 {
-    int run_time = (rand() % 10) + 10; /* random number between 1 and 10 */
-    /* sleep the amout of run_time */
-    if (run_time > running->p_time)
+    printf("-- Action: DISPATCH\t| Process: %d\t| time: 6969\n", running->id);
+    // printf("this is dispatch\n");
+    if (running->resources_required > 0)
     {
-        running->p_time = 0;
+        // printf("This is IO job in CPU\n");
+        running->p_time--;
+        /* mutex lock */
+        enqueue(waiting_queue, running);
+        printf("-- Action: INSERT WQ\t| Process: %d\n",running->id);
+        /* mutex unlock */
+        usleep(1000); /* int nanosleep(const struct timespec *rqtp, struct timespec *rmtp); */
         return 0;
     }
+    // printf("dispatch point 2\n");
+
+    int run_time = (rand() % 10) + 10; /* random number between 1 and 10 */
+
+    /* sleep the amout of run_time */
+    // printf("dispatch point 3\n");
+    if (run_time > running->p_time)
+    {
+        run_time = running->p_time;
+    }
+    // printf("dispatch point 4\n");
+    printf("-- Action: EXECUTE\t| Exec Time: %d\n", run_time);
     running->p_time -= run_time;
-    sleep(run_time / 1000);
+    usleep(run_time * 1000);
 }
 
-void run2(Process *run_this)
+void run2()
 {
+    printf("Ayyyyyyyye runniingggggg!\n");
     int num_processors = 2;
 
     pthread_t thread1, thread2;
     pthread_mutex_init(&lock, NULL);
 
-    pthread_create(&thread1, NULL, round_robin, NULL);
-    pthread_create(&thread2, NULL, round_robin, NULL);
-
+    printf("thread1 create result: %d\n", pthread_create(&thread1, NULL, round_robin, NULL));
+    printf("thread2 create result: %d\n", pthread_create(&thread2, NULL, round_robin, NULL));
+    printf("threads has been created and finished running\n");
     pthread_mutex_destroy(&lock);
 }
+
+void run3()
+{
+    // printf("Ayyyyyyyye runniingggggg!\n");
+    round_robin();
+}
+
 
 /**
  * round_robin() only interacts with ready_queue
@@ -158,21 +189,25 @@ void run2(Process *run_this)
  * else:
  *  run as implemented below
  *  */
-void round_robin()
+void *round_robin()
 {
-    while (ready_queue->size != 0)
+    for(int i=0; i<15; i++)
     {
+        // printf("round robin point 1\n");
         Process *process_to_run;
+        // printf("This is round robin\n");
 
-        pthread_mutex_lock(&lock);
+        // pthread_mutex_lock(&lock);
         process_to_run = dequeue(ready_queue);
-        pthread_mutex_unlock(&lock);
+        // pthread_mutex_unlock(&lock);
+        // printf("round robin point 1\n");
 
-        run_process(process_to_run);
-
-        pthread_mutex_lock(&lock);
+        dispatch(process_to_run);
+        // printf("round robin point 1\n");
+        // pthread_mutex_lock(&lock);
         enqueue(ready_queue, process_to_run);
-        pthread_mutex_unlock(&lock);
+        // pthread_mutex_unlock(&lock);
+        // printf("round robin point 1\n");
     }
 }
 
@@ -188,9 +223,9 @@ void update_wait_time()
 }
 
 /* Mid term scheduler */
-wait_queue_handler()
+void wait_queue_handler()
 {
-    while(1)
+    while (1)
     {
         if (waiting_queue->size == 0)
         {
@@ -209,6 +244,6 @@ wait_queue_handler()
         }
         /* sleep one tick */
         update_wait_time();
-        sleep(1/1000);
+        sleep(1 / 1000);
     }
 }

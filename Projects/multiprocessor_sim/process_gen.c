@@ -54,10 +54,11 @@ Process *process_gen()
     r->resources_required = resources_required();
     r->wait_time = 0;
 
-    printf("JOB CREATED:\n");
-    printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
-        r->id, r->p_time, r->mem, r->resources_required);
+    // printf("JOB CREATED:\n");
+    // printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
+        // r->id, r->p_time, r->mem, r->resources_required);
 
+    printf("-- Action: CREATE\t| Process: %d\t| P_time: %d\n", process_id, p_time);
     return r;
 }
 
@@ -74,7 +75,8 @@ int generator(Process_queue *queue)
     {
         t = process_gen();
         enqueue(queue, t);
-        printf("Process ID: %d inserted into JOB QUEUE\n", t->id);
+        // printf("Process ID: %d inserted into JOB QUEUE\n", t->id);
+        printf("-- Action: INSERT JQ\t| Process: %d\n", t->id);
     }
 
     return n_processes;

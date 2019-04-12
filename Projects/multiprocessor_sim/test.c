@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
 struct
 {
@@ -79,12 +81,17 @@ void loop_continue()
 
 int main()
 {
+    printf("before\n");
+    usleep(2000000);
+    printf("after\n");
+    exit(0);
+
     loop_continue();
-    exit(NULL);
+    exit(0);
 
     Process wow = { 42, 69 };
     Process *t = &wow;
-    printf("address: %d\n", t);
+    // printf("address: %d\n", t);
 
     exit(0);
 
@@ -96,8 +103,8 @@ int main()
     Process_queue *long_term;
     long_term = init_pq();
 
-    printf("head address: %d\n",
-    long_term->head);
+    // printf("head address: %d\n",
+    // long_term->head);
     
     if (long_term->head == NULL)
     {

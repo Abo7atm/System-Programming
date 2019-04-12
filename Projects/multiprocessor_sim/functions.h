@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* bitwise for res? */
 struct process
@@ -48,6 +49,7 @@ Process *dequeue(Process_queue *);
 
 int check_resource_availablity(int);
 void release_resource(int);
+void reserve_resources(Process *);
 
 
 /* Process_gen part */
@@ -58,10 +60,12 @@ int generator(Process_queue *);
 
 
 /* scheduler part */
-void round_robin();
+void *round_robin();
 void insert_ready_queue();
 void insert_job_queue();
 void initialize_pqs();
+void run2();
+void run3();
 
 
 // #endif
