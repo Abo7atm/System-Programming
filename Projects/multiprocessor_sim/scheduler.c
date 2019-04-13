@@ -58,12 +58,12 @@ void insert_ready_queue()
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
 
-    for (int i = 0; i < 15; i++)
+    for (int i = 0; i < 20; i++)
     {
         if (job_queue->size == 0)
         {
             printf("No jobs available\n");
-            sleep(1);
+            usleep(1000);
             continue;
         }
 
@@ -73,7 +73,7 @@ void insert_ready_queue()
         {
             printf("No enough memeory for job\n");
             enqueue(job_queue, new_job);
-            sleep(1);
+            usleep(1000);
             continue;
         }
 
@@ -82,15 +82,16 @@ void insert_ready_queue()
          * Initially, if long term scheduler faces a problem with choosing a job,
          * it'll just stop selecting jobs.
          * */
-        else if (CPU_load > ((IO_load + 1) * 4))
+        /* if CPU > 4*IO and incoming job is CPU job, don't insert */
+        else if (CPU_load > ((IO_load + 1) * 4) && new_job->resources_required == 0)
         {
             printf("Imbalanced jobs\n");
             enqueue(job_queue, new_job);
-            sleep(1);
-            // continue;
-            break;
+            usleep(1000);
+            continue;
+            // break;
         }
-
+        
         /* if job requires 1 or more resources, it is IO bound */
         if (new_job->resources_required > 0 && check_resource_availablity(new_job->resources_required))
         {
@@ -108,15 +109,13 @@ void insert_ready_queue()
             // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
         printf("-- Action: INSERT RQ\t| Process: %d\n", new_job->id);
-        // printf("Remaining jobs in job queue: %d\n", job_queue->size);
-        // printf("CPU Load: %d, IO Load: %d\n", CPU_load, IO_load);
-        usleep(1 / 100);
+        usleep(10000);
     }
     printf("---- Finished Job Scheduler ----\n\n");
 }
 
 /* when a process finished all execution */
-int remove_process(Process *finished)
+void remove_process(Process *finished)
 {
     if (finished->resources_required > 0)
     {
@@ -210,48 +209,45 @@ void run3()
  *  */
 void *round_robin()
 {
-    for (int i = 0; i < 10; i++)
+    printf("---- Start Round Robin ----\n");
+    for (int i = 0; i < 40; i++)
     {
-        int dispatch_result;
+        int dispatch_result; /* value return by dispatch() indicating what next action should be */
         Process *process_to_run;
         process_to_run = dequeue(ready_queue);
-        // pthread_mutex_unlock(&lock);
 
-        /* if remaining execution time is 0 */
-        /* ISSUE: IO Processes return 0 | FIXED */
         dispatch_result = dispatch(process_to_run);
-        if (!dispatch_result)
+        
+        /* ISSUE: IO Processes return 0 | FIXED */
+        if (!dispatch_result) /* if job has finished execution */
         {
             printf("-- Action: REMOVE\t| Process: %d\n", process_to_run->id);
             remove_process(process_to_run);
         }
-        /* if job requested IO */
-        else if (dispatch_result < 0)
+        else if (dispatch_result < 0) /* if job requested IO */
         {
-            enqueue(waiting_queue, process_to_run);
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
+            enqueue(waiting_queue, process_to_run);
+            printf("WQ SIZE ==:> %d\n", waiting_queue->size);
         }
-        // printf("round robin point 1\n");
-        // pthread_mutex_lock(&lock);
-        /* insert back into ready queue */
-        else
+        else /* insert back into ready queue */
         {
             enqueue(ready_queue, process_to_run);
         }
         update_wait_time(burst);
-        // pthread_mutex_unlock(&lock);
     }
+    printf("---- Finish Round Robin ----\n\n");
 }
 
-/* ISSUE: IO Processes will always run 1ms at a time because. */
+/* ISSUE: IO Processes will always run 1ms at a time. | FIXED */
 void update_wait_time(int time_update)
 {
+    printf("");
     printf("WQ Size: %d\n", waiting_queue->size);
 
     if (waiting_queue->size == 0)
     {
         printf("No waiting processes**\n");
-
         return;
     }
 
@@ -263,10 +259,18 @@ void update_wait_time(int time_update)
     while (temp != NULL)
     {
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
-        temp->data->wait_time -= time_update;
+
         if (time_update >= temp->data->wait_time)
         {
             temp->data->wait_time = 0;
+            if (remove_from_middle(waiting_queue, temp->data->id) < 0)
+            {
+                printf("Problem with removing\n");
+            }
+            else
+            {
+                printf("Removed process: %d\n", temp->data->id);
+            }
         }
         else
         {
@@ -275,7 +279,7 @@ void update_wait_time(int time_update)
 
         printf("-- Action: check remaining wait time\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
 
-        if (temp->data->wait_time <= 0)
+        if (temp->data->wait_time <= 0) /* if job has finished waiting */
         {
             printf("\tProcess: %d has finished waiting ", temp->data->id);
             printf("Process has finished IO: %d\n", temp->data->finished_io);

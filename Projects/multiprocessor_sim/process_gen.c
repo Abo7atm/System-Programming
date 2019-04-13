@@ -6,10 +6,10 @@ int process_id = 1;
  * probability generator for
  * resources required by process
 */
-int proba()
+int proba(int th) /* th => threshold */
 {
     float proba = rand() / (float)RAND_MAX * 100.0;
-    if (proba >= 90)
+    if (proba >= th)
     {
         return 1;
     }
@@ -24,7 +24,7 @@ int resources_required()
 
     for (int i = 0; i < 4; i++)
     {
-        if (proba())
+        if (proba(90))
         {
             result |= resources[i];
         }
@@ -53,12 +53,13 @@ Process *process_gen()
     r->mem = mem;
     r->resources_required = resources_required();
     r->wait_time = 0;
+    r->finished_io = 0;
 
     // printf("JOB CREATED:\n");
     // printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
         // r->id, r->p_time, r->mem, r->resources_required);
 
-    printf("-- Action: CREATE\t| Process: %d\t| Resources: %d\n", process_id, r->resources_required);
+    printf("-- Action: CREATE\t| Process: %d\t| Resources: %d\t| P_Time: %d\n", process_id-1, r->resources_required, p_time);
     return r;
 }
 

@@ -12,10 +12,11 @@ struct process
 {
     int id;
     char *creation_date;
-    int p_time;             /* required processing time */
+    int p_time;             /* required processing time in milliseconds */
     int mem;                /* required memory */
     int resources_required; /* 4 bit binary created with bitwise or */
     int wait_time;
+    int finished_io;        /* flag to flip after job has finished waiting for IO */
 } typedef Process;
 
 
@@ -39,6 +40,7 @@ Process_queue *init_pq();
 void enqueue(Process_queue *, Process *);
 void traverse(Process_node *);
 Process *dequeue(Process_queue *);
+int remove_from_middle(Process_queue *, int);
 
 
 /* resource manager part */
@@ -54,7 +56,7 @@ void reserve_resources(Process *);
 
 /* Process_gen part */
 extern int process_id;
-
+int proba(int);
 Process *process_gen();
 int generator(Process_queue *);
 

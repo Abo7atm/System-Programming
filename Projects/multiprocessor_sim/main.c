@@ -14,7 +14,7 @@ int main()
     srand(time(NULL));
 
     start();
-    exit(NULL);
+    exit(0);
 
     Process *ptr, *b;
     Process_queue *queue;

@@ -25,6 +25,7 @@ void enqueue(Process_queue *queue, Process* x)
         // printf("head is NOT NULL anymore\n");
         queue->head = t;
         queue->tail = t;
+        queue->size++;
         return;
     }
 
@@ -72,4 +73,35 @@ Process* dequeue(Process_queue *queue)
     /* upon successful dequeue decrease size */
     queue->size--;
     return result;
+}
+
+int remove_from_middle(Process_queue *queue, int id)
+{
+    if (queue->size == 0)
+    {
+        printf("Waiting Queue is Empty\n");
+        return -1; /* didn't remove anything */
+    }
+
+    Process_node *temp, *current;
+
+    temp = queue->head;
+    current = temp;
+
+    while(current != NULL)
+    {
+        if (temp->data->id == id)
+        {
+            current->next = temp->next;
+            queue->size--;
+            return 0;
+        }
+        else
+        {
+            current = temp;
+            temp = temp->next;
+        }
+    }
+    printf("Didn't Find Matching ID\n");
+    return -1; /* didn't find id */
 }

@@ -30,7 +30,7 @@ int check_resource_availablity(int resource_required)
                 return 0;
             }
             /**
-             * fix process requiring two resources but only one is available. 
+             * ISSUE: process requiring two resources but only one is available. 
              * if process P reserves resource a but resource b is not available,
              * resource a will be reserved for a waiting process.
              * you can call release resource.
