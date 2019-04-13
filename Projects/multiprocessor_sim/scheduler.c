@@ -36,7 +36,7 @@ void initialize_pqs()
 // TODO: return int as an indicator of successful insertion or error.
 void insert_job_queue()
 {
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 10; i++)
     {
         generator(job_queue);
     }
@@ -136,7 +136,7 @@ int dispatch(Process *running)
 {
     int run_time;
 
-    printf("-- Action: DISPATCH\t| Process: %d\t| time: 6969\n", running->id);
+    printf("-- Action: DISPATCH\t| Process: %d\t| time: %d\n", running->id, running->p_time);
 
     if (running->resources_required > 0 && !running->finished_io)
     {
@@ -228,13 +228,14 @@ void *round_robin()
         {
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
             enqueue(waiting_queue, process_to_run);
-            printf("WQ SIZE ==:> %d\n", waiting_queue->size);
         }
         else /* insert back into ready queue */
         {
+            printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
             enqueue(ready_queue, process_to_run);
         }
         update_wait_time(burst);
+        printf("\n");
     }
     printf("---- Finish Round Robin ----\n\n");
 }
@@ -243,11 +244,10 @@ void *round_robin()
 void update_wait_time(int time_update)
 {
     printf("");
-    printf("WQ Size: %d\n", waiting_queue->size);
+    // printf("WQ Size: %d\n", waiting_queue->size);
 
     if (waiting_queue->size == 0)
     {
-        printf("No waiting processes**\n");
         return;
     }
 
@@ -263,11 +263,7 @@ void update_wait_time(int time_update)
         if (time_update >= temp->data->wait_time)
         {
             temp->data->wait_time = 0;
-            if (remove_from_middle(waiting_queue, temp->data->id) < 0)
-            {
-                printf("Problem with removing\n");
-            }
-            else
+            if (remove_from_middle(waiting_queue, temp->data->id) == 0)
             {
                 printf("Removed process: %d\n", temp->data->id);
             }
