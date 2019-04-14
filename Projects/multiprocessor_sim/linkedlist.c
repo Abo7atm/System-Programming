@@ -85,12 +85,18 @@ int remove_from_middle(Process_queue *queue, int id)
 
     Process_node *temp, *current;
 
-    temp = queue->head;
-    current = temp;
+    temp = queue->head; /* i-th element */
+    current = temp;     /* i-1 -th element */
 
-    while(current != NULL)
+    while(temp != NULL)
     {
-        if (temp->data->id == id)
+        if (queue->head->data->id == id)
+        {
+            queue->head = queue->head->next;
+            queue->size--;
+            return 0;
+        }
+        else if (temp->data->id == id)
         {
             current->next = temp->next;
             queue->size--;

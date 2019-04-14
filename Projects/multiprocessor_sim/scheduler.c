@@ -91,16 +91,16 @@ void insert_ready_queue()
             continue;
             // break;
         }
-        
+
         /* if job requires 1 or more resources, it is IO bound */
         if (new_job->resources_required > 0)
         {
             if (check_resource_availablity(new_job->resources_required))
             {
-            enqueue(ready_queue, new_job);
-            reserve_resources(new_job);
-            current_memory_usage += new_job->mem;
-            IO_load++;
+                enqueue(ready_queue, new_job);
+                reserve_resources(new_job);
+                current_memory_usage += new_job->mem;
+                IO_load++;
             }
             // printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
         }
@@ -120,15 +120,13 @@ void insert_ready_queue()
 /* when a process finished all execution */
 void remove_process(Process *finished)
 {
+    /* if it's IO job, release resources reserved by job */
     if (finished->resources_required > 0)
     {
         printf("-- Action: Release\t| Process: %d\n", finished->id);
         /* release resources */
         release_resource(finished->resources_required);
     }
-
-    /* log this action */
-    // some_logging_function(finished);
 
     /* remove from memory */
     current_memory_usage -= finished->mem;
@@ -211,8 +209,12 @@ void run3()
  *  */
 void *round_robin()
 {
+    Process_node *temp;
+    int i = 0;
+
     printf("---- Start Round Robin ----\n");
     while (ready_queue->size > 0)
+    // while (i < 100)
     {
         int dispatch_result; /* value return by dispatch() indicating what next action should be */
         Process *process_to_run;
@@ -221,7 +223,7 @@ void *round_robin()
         dispatch_result = dispatch(process_to_run);
         update_wait_time(burst);
         /* ISSUE: IO Processes return 0 | FIXED */
-        if (!dispatch_result) /* if job has finished execution */
+        if (dispatch_result == 0) /* if job has finished execution */
         {
             printf("-- Action: REMOVE\t| Process: %d\n", process_to_run->id);
             remove_process(process_to_run);
@@ -236,8 +238,46 @@ void *round_robin()
             printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
             enqueue(ready_queue, process_to_run);
         }
-        
+
+        /* debugging: why some jobs are still in the RQ when they have been removed? */
+        /* ----- debugging start ----- */
+        printf("-- Action: CHECK RQ\t| JOBS: [");
+        temp = ready_queue->head;
+        while (temp != NULL)
+        {
+            if (temp->next == NULL)
+            {
+                printf("%d", temp->data->id);
+            }
+            else
+            {
+                printf("%d, ", temp->data->id);
+            }
+            temp = temp->next;
+        }
+        printf("]\n");
+        /* ----- debugging end ----- */
+
+        temp = waiting_queue->head;
+        /* ----- debugging start ----- */
+        printf("-- Action: CHECK WQ\t| JOBS: [");
+        while (temp != NULL)
+        {
+            if (temp->next == NULL)
+            {
+                printf("%d", temp->data->id);
+            }
+            else
+            {
+                printf("%d, ", temp->data->id);
+            }
+            temp = temp->next;
+        }
+        printf("]\n");
+        /* ----- debugging end ----- */
+
         printf("\n");
+        i++;
     }
     printf("---- Finish Round Robin ----\n\n");
 }
@@ -245,41 +285,43 @@ void *round_robin()
 /* ISSUE: IO Processes will always run 1ms at a time. | FIXED */
 void update_wait_time(int time_update)
 {
-    printf("");
+    // printf("");
     // printf("WQ Size: %d\n", waiting_queue->size);
 
     if (waiting_queue->size == 0)
     {
-        return;
+        return; /* nothign to update */
     }
 
-    Process_node *temp;
+    Process_node *temp; /* pointer used to traveres through waiting queue */
     temp = waiting_queue->head;
 
+    /* traverse over all waiting jobs and subtracting burst time from waiting time */
     while (temp != NULL)
     {
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
 
+        /* why do I need this if statement if I have the one below? */
         if (time_update >= temp->data->wait_time)
         {
             temp->data->wait_time = 0;
-            if (remove_from_middle(waiting_queue, temp->data->id) == 0)
-            {
-                // printf("Removed process: %d\n", temp->data->id); /* removed process 4 only?*/
-            }
         }
         else
         {
             temp->data->wait_time -= time_update;
         }
 
-        printf("-- Action: check RT\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
+        printf("-- Action: Check RT\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
 
         if (temp->data->wait_time <= 0) /* if job has finished waiting */
         {
-            // printf("\tProcess: %d has finished waiting ", temp->data->id);
-            // printf("Process has finished IO: %d\n", temp->data->finished_io);
-            temp->data->finished_io = 1;
+            temp->data->finished_io = 1; /* 'job has finished IO business' FLAG */
+            /* remove from waiting queue */
+            if (remove_from_middle(waiting_queue, temp->data->id) != 0)
+            {
+                printf("Problem with removing process id: %d\n", temp->data->id);
+            }
+            printf("-- Action: REMOVE WQ\t| Process: %d\n", temp->data->id);
             enqueue(ready_queue, temp->data);
             printf("-- Action: INSERT RQ2\t| Process: %d\n", temp->data->id);
         }

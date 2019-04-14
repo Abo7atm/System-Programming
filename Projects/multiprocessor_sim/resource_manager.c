@@ -34,6 +34,8 @@ int check_resource_availablity(int resource_required)
              * if process P reserves resource a but resource b is not available,
              * resource a will be reserved for a waiting process.
              * you can call release resource.
+             * 
+             * FIXED!
              * */
             // else
             // {
