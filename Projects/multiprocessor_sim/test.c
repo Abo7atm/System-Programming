@@ -79,8 +79,25 @@ void loop_continue()
     }
 }
 
+void test_if()
+{
+    int x = 1;
+    if (x && 0)
+    {
+        printf("First IF\n");
+    }
+    else
+    {
+        printf("Second IF\n");
+    }
+    return;
+}
+
 int main()
 {
+    test_if();
+    exit(0);
+
     printf("before\n");
     usleep(2000000);
     printf("after\n");

@@ -79,7 +79,7 @@ int remove_from_middle(Process_queue *queue, int id)
 {
     if (queue->size == 0)
     {
-        printf("Waiting Queue is Empty\n");
+        // printf("Waiting Queue is Empty\n");
         return -1; /* didn't remove anything */
     }
 

@@ -63,7 +63,7 @@ void insert_ready_queue()
         if (job_queue->size == 0)
         {
             printf("No jobs available\n");
-            usleep(1000);
+            usleep(10000);
             continue;
         }
 
@@ -73,7 +73,7 @@ void insert_ready_queue()
         {
             printf("No enough memeory for job\n");
             enqueue(job_queue, new_job);
-            usleep(1000);
+            usleep(10000);
             continue;
         }
 
@@ -87,18 +87,21 @@ void insert_ready_queue()
         {
             printf("Imbalanced jobs\n");
             enqueue(job_queue, new_job);
-            usleep(1000);
+            usleep(10000);
             continue;
             // break;
         }
         
         /* if job requires 1 or more resources, it is IO bound */
-        if (new_job->resources_required > 0 && check_resource_availablity(new_job->resources_required))
+        if (new_job->resources_required > 0)
         {
+            if (check_resource_availablity(new_job->resources_required))
+            {
             enqueue(ready_queue, new_job);
             reserve_resources(new_job);
             current_memory_usage += new_job->mem;
             IO_load++;
+            }
             // printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
         }
         else /* if CPU bound */
@@ -119,7 +122,7 @@ void remove_process(Process *finished)
 {
     if (finished->resources_required > 0)
     {
-        printf("-- Action: RlsRsrc\t| Process: %d\n", finished->id);
+        printf("-- Action: Release\t| Process: %d\n", finished->id);
         /* release resources */
         release_resource(finished->resources_required);
     }
@@ -144,14 +147,13 @@ int dispatch(Process *running)
 
         running->p_time--;
         running->wait_time = (rand() % 100) + 1; /* random number between 1 and 100 */
-
+        burst = 1;
         usleep(1000); /* int nanosleep(const struct timespec *rqtp, struct timespec *rmtp); */
         return -1;
     }
-    // printf("dispatch point 2\n");
 
-    /* 80% chance of interrupt */
-    if (proba(80))
+    /* 70% chance of interrupt */
+    if (proba(30))
     {
         run_time = (rand() % 9) + 1; /* random number between 1 and 9 */
     }
@@ -210,14 +212,14 @@ void run3()
 void *round_robin()
 {
     printf("---- Start Round Robin ----\n");
-    for (int i = 0; i < 40; i++)
+    while (ready_queue->size > 0)
     {
         int dispatch_result; /* value return by dispatch() indicating what next action should be */
         Process *process_to_run;
         process_to_run = dequeue(ready_queue);
 
         dispatch_result = dispatch(process_to_run);
-        
+        update_wait_time(burst);
         /* ISSUE: IO Processes return 0 | FIXED */
         if (!dispatch_result) /* if job has finished execution */
         {
@@ -234,7 +236,7 @@ void *round_robin()
             printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
             enqueue(ready_queue, process_to_run);
         }
-        update_wait_time(burst);
+        
         printf("\n");
     }
     printf("---- Finish Round Robin ----\n\n");
@@ -254,8 +256,6 @@ void update_wait_time(int time_update)
     Process_node *temp;
     temp = waiting_queue->head;
 
-    printf("-- Action: UWT|\t Update Amount: %d\n", time_update);
-
     while (temp != NULL)
     {
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
@@ -265,7 +265,7 @@ void update_wait_time(int time_update)
             temp->data->wait_time = 0;
             if (remove_from_middle(waiting_queue, temp->data->id) == 0)
             {
-                printf("Removed process: %d\n", temp->data->id);
+                // printf("Removed process: %d\n", temp->data->id); /* removed process 4 only?*/
             }
         }
         else
@@ -273,12 +273,12 @@ void update_wait_time(int time_update)
             temp->data->wait_time -= time_update;
         }
 
-        printf("-- Action: check remaining wait time\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
+        printf("-- Action: check RT\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
 
         if (temp->data->wait_time <= 0) /* if job has finished waiting */
         {
-            printf("\tProcess: %d has finished waiting ", temp->data->id);
-            printf("Process has finished IO: %d\n", temp->data->finished_io);
+            // printf("\tProcess: %d has finished waiting ", temp->data->id);
+            // printf("Process has finished IO: %d\n", temp->data->finished_io);
             temp->data->finished_io = 1;
             enqueue(ready_queue, temp->data);
             printf("-- Action: INSERT RQ2\t| Process: %d\n", temp->data->id);
