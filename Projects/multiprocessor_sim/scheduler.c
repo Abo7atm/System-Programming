@@ -231,7 +231,7 @@ void *round_robin()
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
             enqueue(waiting_queue, process_to_run);
         }
-        else /* insert back into ready queue */
+        else /* if execition time ramaining, insert back into ready queue */
         {
             printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
             enqueue(ready_queue, process_to_run);
