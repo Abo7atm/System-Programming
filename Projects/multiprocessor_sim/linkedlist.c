@@ -56,12 +56,12 @@ void traverse(Process_node *start)
     printf("%d\n", t->data);
 }
 
-Process* dequeue(Process_queue *queue)
+Process* dequeue(Process_queue *queue, char* name)
 {
     /* check if queue is empty */
     if (queue->head == NULL)
     {
-        printf("Queue empty\n");
+        printf("Queue %s empty\n", name);
         return NULL;
     }
 

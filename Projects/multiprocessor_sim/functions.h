@@ -39,7 +39,7 @@ Process_queue *init_pq();
 
 void enqueue(Process_queue *, Process *);
 void traverse(Process_node *);
-Process *dequeue(Process_queue *);
+Process* dequeue(Process_queue *, char* );
 int remove_from_middle(Process_queue *, int);
 
 

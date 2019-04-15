@@ -22,8 +22,8 @@
 Process_queue *job_queue, *ready_queue, *waiting_queue;
 int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
 
-pthread_mutex_t rq_lock, wq_lock, loop_lock; /* ready queue lock, waiting queue lock and loop lock*/
-pthread_t cpu_thread[2], insert_jq, insert_rq; 
+pthread_mutex_t rq_lock, wq_lock, loop_lock, jq_lock; /* ready queue lock, waiting queue lock and loop lock*/
+pthread_t cpu_thread[2], insert_jq, insert_rq;
 
 void update_wait_time(int time_update);
 
@@ -61,34 +61,39 @@ void *insert_job_queue()
  * */
 void *insert_ready_queue()
 {
-    printf("here is insert_ready_queeu\n");
-    printf("Ready queue size: %d\n", ready_queue->size);
     int count_resources; /* count number of resources required */
+    if (job_queue->size == 0)
+    {
+        sleep(1);
+    }
     int memory_needed = job_queue->head->data->mem;
 
-    for (int i = 0; i < 20; i++)
+    while (1)
     {
+        printf("point 1\n");
         if (job_queue->size == 0)
         {
             printf("No jobs available\n");
-            usleep(10000);
+            sleep(1);
             continue;
         }
+        printf("point 2\n");
 
-        Process *new_job = dequeue(job_queue);
-
+        Process *new_job = dequeue(job_queue, "JQ");
+        printf("point 3\n");
         if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
         {
             printf("No enough memeory for job\n");
 
+            pthread_mutex_lock(&jq_lock);
             
             enqueue(job_queue, new_job);
-            
-            
-            usleep(10000);
+
+            pthread_mutex_unlock(&jq_lock);
+
+            sleep(1);
             continue;
         }
-
         /**
          * Compare number of IO jobs vs CPU jobs.
          * Initially, if long term scheduler faces a problem with choosing a job,
@@ -98,12 +103,18 @@ void *insert_ready_queue()
         else if (CPU_load > ((IO_load + 1) * 4) && new_job->resources_required == 0)
         {
             printf("Imbalanced jobs\n");
+
+            pthread_mutex_lock(&jq_lock);
+
             enqueue(job_queue, new_job);
-            usleep(10000);
+
+            pthread_mutex_unlock(&jq_lock);
+
+            sleep(1);
             continue;
             // break;
         }
-
+        printf("point 3\n");
         /* if job requires 1 or more resources, it is IO bound */
         if (new_job->resources_required > 0)
         {
@@ -131,6 +142,7 @@ void *insert_ready_queue()
             pthread_mutex_unlock(&rq_lock);
             // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
+        printf("point 4\n");
         printf("-- Action: INSERT RQ\t| Process: %d\n", new_job->id);
         usleep(10000);
     }
@@ -145,11 +157,15 @@ void remove_process(Process *finished)
     {
         printf("-- Action: Release\t| Process: %d\n", finished->id);
         /* release resources */
+        /* lock */
         release_resource(finished->resources_required);
+        /* unl0ck */
     }
 
     /* remove from memory */
+    /* lock */
     current_memory_usage -= finished->mem;
+    /* unlock */
     free(finished);
 }
 
@@ -213,6 +229,7 @@ void run2()
 void run3()
 {
     /* initialize mutex locks */
+    pthread_mutex_init(&jq_lock, NULL);
     pthread_mutex_init(&rq_lock, NULL);
     pthread_mutex_init(&wq_lock, NULL);
     pthread_mutex_init(&loop_lock, NULL);
@@ -247,6 +264,7 @@ void run3()
     pthread_join(cpu_thread[0], NULL);
     pthread_join(cpu_thread[1], NULL);
 
+    pthread_mutex_destroy(&jq_lock);
     pthread_mutex_destroy(&rq_lock);
     pthread_mutex_destroy(&wq_lock);
     pthread_mutex_destroy(&loop_lock);
@@ -269,24 +287,30 @@ void run3()
  *  */
 void *round_robin()
 {
-    sleep(1); /* in order to ensure some processes are in the queues */
     Process_node *temp;
     int i = 0;
 
     printf("---- Start Round Robin ----\n");
-    while (ready_queue->size > 0)
+    printf("@RR: Ready queue size: %d\n", ready_queue->size);
+    while (1)
     // while (i < 100)
     {
+        if (ready_queue->size == 0)
+        {
+            sleep(1);
+            continue;
+        }
+
         int dispatch_result; /* value return by dispatch() indicating what next action should be */
         Process *process_to_run;
 
         pthread_mutex_lock(&rq_lock);
-        process_to_run = dequeue(ready_queue);
+        process_to_run = dequeue(ready_queue,"RQ");
         pthread_mutex_unlock(&rq_lock);
 
         dispatch_result = dispatch(process_to_run);
 
-        update_wait_time(burst); /* should be indepenedent */
+        // update_wait_time(burst); /* should be indepenedent */
 
         /* ISSUE: IO Processes return 0 | FIXED */
         if (dispatch_result == 0) /* if job has finished execution */

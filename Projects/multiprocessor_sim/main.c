@@ -15,7 +15,7 @@ int main()
 
     start();
     exit(0);
-
+    /*
     Process *ptr, *b;
     Process_queue *queue;
     int size;
@@ -31,6 +31,6 @@ int main()
         printf("process id: %d, processing time: %d, memory: %d, resources: %d\n",
                b->id, b->p_time, b->mem, b->resources_required);
     }
-
+    */
     return 0;
 }
