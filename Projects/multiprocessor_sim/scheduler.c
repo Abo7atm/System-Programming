@@ -22,9 +22,8 @@
 Process_queue *job_queue, *ready_queue, *waiting_queue;
 int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
 
-pthread_mutex_t rq_lock, wq_lock; /* ready queue lock, and waiting queue lock */
-pthread_t cpu_thread[2]; /* two threads as a start */
-
+pthread_mutex_t rq_lock, wq_lock, loop_lock; /* ready queue lock, waiting queue lock and loop lock*/
+pthread_t cpu_thread[2], insert_jq, insert_rq; 
 
 void update_wait_time(int time_update);
 
@@ -37,14 +36,18 @@ void initialize_pqs()
 
 /* insert new processes into job_queue */
 // TODO: return int as an indicator of successful insertion or error.
-void insert_job_queue()
+void *insert_job_queue()
 {
-    for (int i = 0; i < 10; i++)
+    printf("here is insert_job_queue\n");
+    printf("Job queue size: %d\n", job_queue->size);
+    while (1)
     {
+        printf("point before generator\n");
         generator(job_queue);
+        sleep(10);
     }
     // printf("job queue size: %d\n", job_queue->size);
-    printf("---- Finished Job Generation ----\n\n");
+    // printf("---- Finished Job Generation ----\n\n");
 }
 
 /** 
@@ -56,8 +59,10 @@ void insert_job_queue()
  * it's considered an IO bound process,
  * otherwise, it's a cpu bound process. 
  * */
-void insert_ready_queue()
+void *insert_ready_queue()
 {
+    printf("here is insert_ready_queeu\n");
+    printf("Ready queue size: %d\n", ready_queue->size);
     int count_resources; /* count number of resources required */
     int memory_needed = job_queue->head->data->mem;
 
@@ -75,7 +80,11 @@ void insert_ready_queue()
         if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
         {
             printf("No enough memeory for job\n");
+
+            
             enqueue(job_queue, new_job);
+            
+            
             usleep(10000);
             continue;
         }
@@ -100,18 +109,26 @@ void insert_ready_queue()
         {
             if (check_resource_availablity(new_job->resources_required))
             {
+                pthread_mutex_lock(&rq_lock);
+
                 enqueue(ready_queue, new_job);
                 reserve_resources(new_job);
                 current_memory_usage += new_job->mem;
                 IO_load++;
+
+                pthread_mutex_unlock(&rq_lock);
             }
             // printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
         }
         else /* if CPU bound */
         {
+            pthread_mutex_lock(&rq_lock);
+
             enqueue(ready_queue, new_job);
             current_memory_usage += new_job->mem;
             CPU_load++;
+
+            pthread_mutex_unlock(&rq_lock);
             // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
         printf("-- Action: INSERT RQ\t| Process: %d\n", new_job->id);
@@ -198,9 +215,22 @@ void run3()
     /* initialize mutex locks */
     pthread_mutex_init(&rq_lock, NULL);
     pthread_mutex_init(&wq_lock, NULL);
+    pthread_mutex_init(&loop_lock, NULL);
+
+    /* create long term scheduler */
+    if (pthread_create(&insert_jq, NULL, insert_job_queue, NULL) != 0)
+    {
+        printf("error creating long term scheduler\n");
+    }
+
+    /* create short term scheduler */
+    if (pthread_create(&insert_rq, NULL, insert_ready_queue, NULL) != 0)
+    {
+        printf("error creating short term scheduler\n");
+    }
 
     /* creating threads */
-    for(int i=0; i<2; i++)
+    for (int i = 0; i < 2; i++)
     {
         if (pthread_create(&(cpu_thread[i]), NULL, round_robin, NULL) != 0)
         {
@@ -212,11 +242,14 @@ void run3()
         }
     }
 
-    pthread_join(cpu_thread[0], NULL); 
-    pthread_join(cpu_thread[1], NULL); 
+    pthread_join(insert_jq, NULL);
+    pthread_join(insert_rq, NULL);
+    pthread_join(cpu_thread[0], NULL);
+    pthread_join(cpu_thread[1], NULL);
 
     pthread_mutex_destroy(&rq_lock);
     pthread_mutex_destroy(&wq_lock);
+    pthread_mutex_destroy(&loop_lock);
 
     // round_robin();
     return;
@@ -236,6 +269,7 @@ void run3()
  *  */
 void *round_robin()
 {
+    sleep(1); /* in order to ensure some processes are in the queues */
     Process_node *temp;
     int i = 0;
 
@@ -263,7 +297,7 @@ void *round_robin()
         else if (dispatch_result < 0) /* if job requested IO */
         {
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
-            
+
             pthread_mutex_lock(&wq_lock);
             enqueue(waiting_queue, process_to_run);
             pthread_mutex_unlock(&wq_lock);
@@ -278,6 +312,7 @@ void *round_robin()
 
         /* debugging: why some jobs are still in the RQ when they have been removed? */
         /* ----- debugging start ----- */
+        pthread_mutex_lock(&loop_lock);
         printf("-- Action: CHECK RQ\t| JOBS: [");
         temp = ready_queue->head;
         while (temp != NULL)
@@ -293,8 +328,10 @@ void *round_robin()
             temp = temp->next;
         }
         printf("]\n");
-        /* ----- debugging end ----- */
+        pthread_mutex_unlock(&loop_lock);
+        // /* ----- debugging end ----- */
 
+        pthread_mutex_lock(&loop_lock);
         temp = waiting_queue->head;
         /* ----- debugging start ----- */
         printf("-- Action: CHECK WQ\t| JOBS: [");
@@ -311,6 +348,7 @@ void *round_robin()
             temp = temp->next;
         }
         printf("]\n");
+        pthread_mutex_unlock(&loop_lock);
         /* ----- debugging end ----- */
 
         printf("\n");

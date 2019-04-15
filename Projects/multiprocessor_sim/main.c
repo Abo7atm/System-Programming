@@ -3,8 +3,8 @@
 void start() /* not init */
 {
     initialize_pqs();
-    insert_job_queue(); /* will call generator */
-    insert_ready_queue();
+    // insert_job_queue(); /* will call generator */
+    // insert_ready_queue();
     // printf("Now will run!\n");
     run3();
 }
