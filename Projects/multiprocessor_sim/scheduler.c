@@ -21,7 +21,10 @@
 
 Process_queue *job_queue, *ready_queue, *waiting_queue;
 int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
-pthread_mutex_t lock;
+
+pthread_mutex_t rq_lock, wq_lock; /* ready queue lock, and waiting queue lock */
+pthread_t cpu_thread[2]; /* two threads as a start */
+
 
 void update_wait_time(int time_update);
 
@@ -182,17 +185,41 @@ void run2()
     int num_processors = 2;
 
     pthread_t thread1, thread2;
-    pthread_mutex_init(&lock, NULL);
+    // pthread_mutex_init(&lock, NULL);
 
     printf("thread1 create result: %d\n", pthread_create(&thread1, NULL, round_robin, NULL));
     printf("thread2 create result: %d\n", pthread_create(&thread2, NULL, round_robin, NULL));
     printf("threads has been created and finished running\n");
-    pthread_mutex_destroy(&lock);
+    // pthread_mutex_destroy(&lock);
 }
 
 void run3()
 {
-    round_robin();
+    /* initialize mutex locks */
+    pthread_mutex_init(&rq_lock, NULL);
+    pthread_mutex_init(&wq_lock, NULL);
+
+    /* creating threads */
+    for(int i=0; i<2; i++)
+    {
+        if (pthread_create(&(cpu_thread[i]), NULL, round_robin, NULL) != 0)
+        {
+            printf("error creating thread\n");
+        }
+        else
+        {
+            printf("Thread created successfully!\n");
+        }
+    }
+
+    pthread_join(cpu_thread[0], NULL); 
+    pthread_join(cpu_thread[1], NULL); 
+
+    pthread_mutex_destroy(&rq_lock);
+    pthread_mutex_destroy(&wq_lock);
+
+    // round_robin();
+    return;
 }
 
 /**
@@ -218,10 +245,15 @@ void *round_robin()
     {
         int dispatch_result; /* value return by dispatch() indicating what next action should be */
         Process *process_to_run;
+
+        pthread_mutex_lock(&rq_lock);
         process_to_run = dequeue(ready_queue);
+        pthread_mutex_unlock(&rq_lock);
 
         dispatch_result = dispatch(process_to_run);
-        update_wait_time(burst);
+
+        update_wait_time(burst); /* should be indepenedent */
+
         /* ISSUE: IO Processes return 0 | FIXED */
         if (dispatch_result == 0) /* if job has finished execution */
         {
@@ -231,12 +263,17 @@ void *round_robin()
         else if (dispatch_result < 0) /* if job requested IO */
         {
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
+            
+            pthread_mutex_lock(&wq_lock);
             enqueue(waiting_queue, process_to_run);
+            pthread_mutex_unlock(&wq_lock);
         }
         else /* if execition time ramaining, insert back into ready queue */
         {
             printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
+            pthread_mutex_lock(&rq_lock);
             enqueue(ready_queue, process_to_run);
+            pthread_mutex_unlock(&rq_lock);
         }
 
         /* debugging: why some jobs are still in the RQ when they have been removed? */
