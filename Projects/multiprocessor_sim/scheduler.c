@@ -23,9 +23,9 @@ Process_queue *job_queue, *ready_queue, *waiting_queue;
 int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
 
 pthread_mutex_t rq_lock, wq_lock, loop_lock, jq_lock; /* ready queue lock, waiting queue lock and loop lock*/
-pthread_t cpu_thread[2], insert_jq, insert_rq;
+pthread_t cpu_thread[2], insert_jq, insert_rq, update_wait;
 
-void update_wait_time(int time_update);
+void *update_wait_time();
 
 void initialize_pqs()
 {
@@ -70,23 +70,21 @@ void *insert_ready_queue()
 
     while (1)
     {
-        printf("point 1\n");
         if (job_queue->size == 0)
         {
             printf("No jobs available\n");
             sleep(1);
             continue;
         }
-        printf("point 2\n");
 
         Process *new_job = dequeue(job_queue, "JQ");
-        printf("point 3\n");
+
         if (current_memory_usage == MAX_MEMORY || memory_needed >= (MAX_MEMORY - current_memory_usage))
         {
             printf("No enough memeory for job\n");
 
             pthread_mutex_lock(&jq_lock);
-            
+
             enqueue(job_queue, new_job);
 
             pthread_mutex_unlock(&jq_lock);
@@ -114,7 +112,7 @@ void *insert_ready_queue()
             continue;
             // break;
         }
-        printf("point 3\n");
+
         /* if job requires 1 or more resources, it is IO bound */
         if (new_job->resources_required > 0)
         {
@@ -142,7 +140,7 @@ void *insert_ready_queue()
             pthread_mutex_unlock(&rq_lock);
             // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
-        printf("point 4\n");
+
         printf("-- Action: INSERT RQ\t| Process: %d\n", new_job->id);
         usleep(10000);
     }
@@ -246,6 +244,11 @@ void run3()
         printf("error creating short term scheduler\n");
     }
 
+    if (pthread_create(&update_wait, NULL, update_wait_time, NULL) != 0)
+    {
+        printf("error creating awit time updater\n");
+    }
+
     /* creating threads */
     for (int i = 0; i < 2; i++)
     {
@@ -263,6 +266,7 @@ void run3()
     pthread_join(insert_rq, NULL);
     pthread_join(cpu_thread[0], NULL);
     pthread_join(cpu_thread[1], NULL);
+    pthread_join(update_wait, NULL);
 
     pthread_mutex_destroy(&jq_lock);
     pthread_mutex_destroy(&rq_lock);
@@ -305,12 +309,12 @@ void *round_robin()
         Process *process_to_run;
 
         pthread_mutex_lock(&rq_lock);
-        process_to_run = dequeue(ready_queue,"RQ");
+        process_to_run = dequeue(ready_queue, "RQ");
         pthread_mutex_unlock(&rq_lock);
 
         dispatch_result = dispatch(process_to_run);
 
-        // update_wait_time(burst); /* should be indepenedent */
+        // update_wait_time(burst); /* should be indepenedent | it is now. */
 
         /* ISSUE: IO Processes return 0 | FIXED */
         if (dispatch_result == 0) /* if job has finished execution */
@@ -382,33 +386,40 @@ void *round_robin()
 }
 
 /* ISSUE: IO Processes will always run 1ms at a time. | FIXED */
-void update_wait_time(int time_update)
+void *update_wait_time()
 {
-    // printf("");
-    // printf("WQ Size: %d\n", waiting_queue->size);
-
     if (waiting_queue->size == 0)
     {
-        return; /* nothign to update */
+        usleep(1000); /* nothign to update */
     }
 
     Process_node *temp; /* pointer used to traveres through waiting queue */
     temp = waiting_queue->head;
 
     /* traverse over all waiting jobs and subtracting burst time from waiting time */
-    while (temp != NULL)
+    while (1)
     {
+        if (temp == NULL)
+        {
+            /* waiting queue is empty */
+            usleep(1000);
+            continue;
+        }
+
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
 
         /* why do I need this if statement if I have the one below? */
-        if (time_update >= temp->data->wait_time)
-        {
-            temp->data->wait_time = 0;
-        }
-        else
-        {
-            temp->data->wait_time -= time_update;
-        }
+        // if (time_update >= temp->data->wait_time)
+        // {
+        //     temp->data->wait_time = 0;
+        // }
+        // else
+        // {
+        //     // temp->data->wait_time -= time_update;
+        //     temp->data->wait_time--;
+        // }
+
+        temp->data->wait_time--;
 
         printf("-- Action: Check RT\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
 
@@ -421,10 +432,13 @@ void update_wait_time(int time_update)
                 printf("Problem with removing process id: %d\n", temp->data->id);
             }
             printf("-- Action: REMOVE WQ\t| Process: %d\n", temp->data->id);
+
+            pthread_mutex_lock(&rq_lock);
             enqueue(ready_queue, temp->data);
+            pthread_mutex_unlock(&rq_lock);
+
             printf("-- Action: INSERT RQ2\t| Process: %d\n", temp->data->id);
         }
-
         temp = temp->next;
     }
 }
