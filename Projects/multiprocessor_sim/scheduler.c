@@ -385,12 +385,6 @@ void *round_robin()
 /* ISSUE: IO Processes will always run 1ms at a time. | FIXED */
 void *update_wait_time()
 {
-    if (waiting_queue->size == 0)
-    {
-        printf("waiting queue is zero\n");
-        usleep(1000); /* nothign to update */
-    }
-
     Process_node *temp; /* pointer used to traveres through waiting queue */
     temp = waiting_queue->head;
 
@@ -408,17 +402,7 @@ void *update_wait_time()
         /* wait time before update */
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
 
-        /* why do I need this if statement if I have the one below? */
-        // if (time_update >= temp->data->wait_time)
-        // {
-        //     temp->data->wait_time = 0;
-        // }
-        // else
-        // {
-        //     // temp->data->wait_time -= time_update;
-        //     temp->data->wait_time--;
-        // }
-
+        /* since each iteration in this loop resembels one ms, decrement by one only. */
         temp->data->wait_time--;
 
         /* remaining time */
@@ -469,4 +453,4 @@ void wait_queue_handler()
         // update_wait_time();
         sleep(1 / 1000);
     }
-}
+} 
