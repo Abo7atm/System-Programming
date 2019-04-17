@@ -38,11 +38,9 @@ void initialize_pqs()
 // TODO: return int as an indicator of successful insertion or error.
 void *insert_job_queue()
 {
-    printf("here is insert_job_queue\n");
     printf("Job queue size: %d\n", job_queue->size);
     while (1)
     {
-        printf("point before generator\n");
         generator(job_queue);
         sleep(10);
     }
@@ -155,7 +153,7 @@ void remove_process(Process *finished)
     {
         printf("-- Action: Release\t| Process: %d\n", finished->id);
         /* release resources */
-        /* lock */
+        /* lock | Why lock here? */
         release_resource(finished->resources_required);
         /* unl0ck */
     }
@@ -255,18 +253,18 @@ void run3()
         if (pthread_create(&(cpu_thread[i]), NULL, round_robin, NULL) != 0)
         {
             printf("error creating thread\n");
+            exit(0);
         }
         else
         {
-            printf("Thread created successfully!\n");
         }
     }
 
     pthread_join(insert_jq, NULL);
     pthread_join(insert_rq, NULL);
+    pthread_join(update_wait, NULL);
     pthread_join(cpu_thread[0], NULL);
     pthread_join(cpu_thread[1], NULL);
-    pthread_join(update_wait, NULL);
 
     pthread_mutex_destroy(&jq_lock);
     pthread_mutex_destroy(&rq_lock);
@@ -295,7 +293,6 @@ void *round_robin()
     int i = 0;
 
     printf("---- Start Round Robin ----\n");
-    printf("@RR: Ready queue size: %d\n", ready_queue->size);
     while (1)
     // while (i < 100)
     {
@@ -390,6 +387,7 @@ void *update_wait_time()
 {
     if (waiting_queue->size == 0)
     {
+        printf("waiting queue is zero\n");
         usleep(1000); /* nothign to update */
     }
 
@@ -403,9 +401,11 @@ void *update_wait_time()
         {
             /* waiting queue is empty */
             usleep(1000);
+            temp = waiting_queue->head;
             continue;
         }
 
+        /* wait time before update */
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
 
         /* why do I need this if statement if I have the one below? */
@@ -421,6 +421,7 @@ void *update_wait_time()
 
         temp->data->wait_time--;
 
+        /* remaining time */
         printf("-- Action: Check RT\t| Process: %d\t| RT: %d\n", temp->data->id, temp->data->wait_time);
 
         if (temp->data->wait_time <= 0) /* if job has finished waiting */
@@ -444,6 +445,7 @@ void *update_wait_time()
 }
 
 /* Mid term scheduler */
+/* this can be deleted */
 void wait_queue_handler()
 {
     while (1)
