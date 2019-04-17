@@ -23,7 +23,7 @@ Process_queue *job_queue, *ready_queue, *waiting_queue;
 int burst, current_memory_usage = 0, IO_load, CPU_load, total_load;
 
 pthread_mutex_t rq_lock, wq_lock, loop_lock, jq_lock; /* ready queue lock, waiting queue lock and loop lock*/
-pthread_t cpu_thread[2], insert_jq, insert_rq, update_wait;
+pthread_t cpu_thread[2], insert_jq, insert_rq, update_wait, mem_lock;
 
 void *update_wait_time();
 
@@ -82,9 +82,9 @@ void *insert_ready_queue()
             printf("No enough memeory for job\n");
 
             pthread_mutex_lock(&jq_lock);
-
+            /* ------ critical section start ------ */
             enqueue(job_queue, new_job);
-
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&jq_lock);
 
             sleep(1);
@@ -101,9 +101,9 @@ void *insert_ready_queue()
             printf("Imbalanced jobs\n");
 
             pthread_mutex_lock(&jq_lock);
-
+            /* ------ critical section start ------ */
             enqueue(job_queue, new_job);
-
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&jq_lock);
 
             sleep(1);
@@ -117,12 +117,12 @@ void *insert_ready_queue()
             if (check_resource_availablity(new_job->resources_required))
             {
                 pthread_mutex_lock(&rq_lock);
-
+                /* ------ critical section start ------ */
                 enqueue(ready_queue, new_job);
                 reserve_resources(new_job);
                 current_memory_usage += new_job->mem;
                 IO_load++;
-
+                /* ------ critical section end ------ */
                 pthread_mutex_unlock(&rq_lock);
             }
             // printf("Process ID: %d is IO intensive -- interted in READY QUEUE and resources reserved\n");
@@ -130,11 +130,11 @@ void *insert_ready_queue()
         else /* if CPU bound */
         {
             pthread_mutex_lock(&rq_lock);
-
+            /* ------ critical section start ------ */
             enqueue(ready_queue, new_job);
             current_memory_usage += new_job->mem;
             CPU_load++;
-
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&rq_lock);
             // printf("Process ID: %d is CPU intensive -- interted in READY QUEUE\n");
         }
@@ -160,9 +160,13 @@ void remove_process(Process *finished)
 
     /* remove from memory */
     /* lock */
+    pthread_mutex_lock(&mem_lock);
+    /* ------ critical section start ------ */
     current_memory_usage -= finished->mem;
-    /* unlock */
-    free(finished);
+    pthread_mutex_unlock(&mem_lock);
+    /* ------ critical section start ------ */
+
+    free(finished); /* deallocate memroy */
 }
 
 int dispatch(Process *running)
@@ -208,6 +212,7 @@ int dispatch(Process *running)
     return running->p_time;
 }
 
+/* this function can be deleted */
 void run2()
 {
     printf("Ayyyyyyyye runniingggggg!\n");
@@ -225,10 +230,11 @@ void run2()
 void run3()
 {
     /* initialize mutex locks */
-    pthread_mutex_init(&jq_lock, NULL);
-    pthread_mutex_init(&rq_lock, NULL);
-    pthread_mutex_init(&wq_lock, NULL);
-    pthread_mutex_init(&loop_lock, NULL);
+    pthread_mutex_init(&jq_lock, NULL);   /* lock on enqueuing to job queue */
+    pthread_mutex_init(&rq_lock, NULL);   /* lock on enqueuing to ready queue */
+    pthread_mutex_init(&wq_lock, NULL);   /* lock on enqueuing to waiting queue */
+    pthread_mutex_init(&loop_lock, NULL); /* lock on loop in update_wait_time() */
+    pthread_mutex_init(&mem_lock, NULL);  /* lock on memory usage variable */
 
     /* create long term scheduler */
     if (pthread_create(&insert_jq, NULL, insert_job_queue, NULL) != 0)
@@ -242,21 +248,19 @@ void run3()
         printf("error creating short term scheduler\n");
     }
 
+    /* update wait time thread so it can be independent */
     if (pthread_create(&update_wait, NULL, update_wait_time, NULL) != 0)
     {
         printf("error creating awit time updater\n");
     }
 
-    /* creating threads */
+    /* creating CPU threads */
     for (int i = 0; i < 2; i++)
     {
         if (pthread_create(&(cpu_thread[i]), NULL, round_robin, NULL) != 0)
         {
             printf("error creating thread\n");
             exit(0);
-        }
-        else
-        {
         }
     }
 
@@ -270,8 +274,8 @@ void run3()
     pthread_mutex_destroy(&rq_lock);
     pthread_mutex_destroy(&wq_lock);
     pthread_mutex_destroy(&loop_lock);
+    pthread_mutex_destroy(&mem_lock);
 
-    // round_robin();
     return;
 }
 
@@ -282,8 +286,9 @@ void run3()
  * the process has exhausted all of it's quantum, else, process has been
  * interrupted.
  * Diffrentiate between IO bound and CPU bound jobs.
- * if (jobs is io bound):
- *  run for 1 ms and generate a random wait time that represents IO wait time.
+ * if (jobs is IO bound):
+ *  1) run for 1 ms and generate a random wait time that represents IO wait time.
+ *  2) insert to waiting queue
  * else:
  *  run as implemented below
  *  */
@@ -302,16 +307,16 @@ void *round_robin()
             continue;
         }
 
-        int dispatch_result; /* value return by dispatch() indicating what next action should be */
+        int dispatch_result; /* value returned by dispatch() indicating what next action should be */
         Process *process_to_run;
 
         pthread_mutex_lock(&rq_lock);
+        /* ------ critical section start ------ */
         process_to_run = dequeue(ready_queue, "RQ");
+        /* ------ critical section end ------ */
         pthread_mutex_unlock(&rq_lock);
 
         dispatch_result = dispatch(process_to_run);
-
-        // update_wait_time(burst); /* should be indepenedent | it is now. */
 
         /* ISSUE: IO Processes return 0 | FIXED */
         if (dispatch_result == 0) /* if job has finished execution */
@@ -324,20 +329,26 @@ void *round_robin()
             printf("-- Action: INSERT WQ\t| Process: %d\t| Wait Time: %d\n", process_to_run->id, process_to_run->wait_time);
 
             pthread_mutex_lock(&wq_lock);
+            /* ------ critical section start ------ */
             enqueue(waiting_queue, process_to_run);
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&wq_lock);
         }
-        else /* if execition time ramaining, insert back into ready queue */
+        else /* if execition time ramaining > 0, insert back into ready queue */
         {
             printf("-- Action: INSERT RQ\t| Process: %d\t| Time: %d\n", process_to_run->id, process_to_run->p_time);
+
             pthread_mutex_lock(&rq_lock);
+            /* --- critical section start --- */
             enqueue(ready_queue, process_to_run);
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&rq_lock);
         }
 
         /* debugging: why some jobs are still in the RQ when they have been removed? */
-        /* ----- debugging start ----- */
+
         pthread_mutex_lock(&loop_lock);
+        /* ------ critical section start ------ */
         printf("-- Action: CHECK RQ\t| JOBS: [");
         temp = ready_queue->head;
         while (temp != NULL)
@@ -353,12 +364,13 @@ void *round_robin()
             temp = temp->next;
         }
         printf("]\n");
+        /* ------ critical section end ------ */
         pthread_mutex_unlock(&loop_lock);
-        // /* ----- debugging end ----- */
 
         pthread_mutex_lock(&loop_lock);
+        /* ------ critical section start ------ */
         temp = waiting_queue->head;
-        /* ----- debugging start ----- */
+
         printf("-- Action: CHECK WQ\t| JOBS: [");
         while (temp != NULL)
         {
@@ -373,8 +385,8 @@ void *round_robin()
             temp = temp->next;
         }
         printf("]\n");
+        /* ------ critical section end ------ */
         pthread_mutex_unlock(&loop_lock);
-        /* ----- debugging end ----- */
 
         printf("\n");
         i++;
@@ -385,6 +397,12 @@ void *round_robin()
 /* ISSUE: IO Processes will always run 1ms at a time. | FIXED */
 void *update_wait_time()
 {
+     if (waiting_queue->size == 0)
+    {
+        printf("waiting queue is zero\n");
+        usleep(1000); /* nothign to update */
+    }
+
     Process_node *temp; /* pointer used to traveres through waiting queue */
     temp = waiting_queue->head;
 
@@ -395,10 +413,12 @@ void *update_wait_time()
         {
             /* waiting queue is empty */
             usleep(1000);
-            temp = waiting_queue->head;
+            if (waiting_queue->size > 0)
+            {
+                temp = waiting_queue->head;
+            }
             continue;
         }
-
         /* wait time before update */
         printf("-- Action: Check WT\t| Process: %d\t| WT: %d\n", temp->data->id, temp->data->wait_time);
 
@@ -419,7 +439,9 @@ void *update_wait_time()
             printf("-- Action: REMOVE WQ\t| Process: %d\n", temp->data->id);
 
             pthread_mutex_lock(&rq_lock);
+            /* ------ critical section start ------ */
             enqueue(ready_queue, temp->data);
+            /* ------ critical section end ------ */
             pthread_mutex_unlock(&rq_lock);
 
             printf("-- Action: INSERT RQ2\t| Process: %d\n", temp->data->id);
@@ -453,4 +475,4 @@ void wait_queue_handler()
         // update_wait_time();
         sleep(1 / 1000);
     }
-} 
+}
