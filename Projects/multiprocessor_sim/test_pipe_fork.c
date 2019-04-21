@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include "functions.h"
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+int piped[2],  fifo_fd;
+
+/* recieve signal from cpu indicating finshed execution */
+void handle_signal();
+
+int main()
+{
+    signal(SIGUSR1, handle_signal);
+
+    char *fifo_path = "/tmp/sched_cpu_fifo";
+    if (mkfifo(fifo_path, 0666) < 0)
+    {
+        perror("mkfifo");
+        printf("Maybe its because fifo exits\n");
+    }
+
+    int pid;
+    srand(time(NULL));
+
+    /* safety checks */
+    if (pipe(piped) < 0)
+    {
+        perror("pipe1");
+        exit(EXIT_FAILURE);
+    }
+
+    /* fork child that will exec CPU program */
+    if ((pid = fork()) < 0)
+    {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    else if (pid > 0) // parent process
+    {
+
+        close(piped[0]); // close reading end of pipe
+
+        // FIFO to read from when signaled
+        if ((fifo_fd = open(fifo_path, O_RDONLY)) < 0)
+        {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+
+        Process *process_to_send;
+        int i = 0;
+
+        while (i < 10)
+        {
+            process_to_send = process_gen();
+            if (write(piped[1], process_to_send, sizeof(Process)) < 0)
+            {
+                perror("write");
+                exit(EXIT_FAILURE);
+            }
+            i++;
+        }
+        wait(NULL);
+    }
+    else // child process
+    {
+        close(piped[1]);
+
+        int fifo_df_child;
+        if ((fifo_df_child = open(fifo_path, O_WRONLY)) < 0)
+        {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+
+        // pipe to read from
+        if (dup2(piped[0], STDIN_FILENO) < 0)
+        {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+
+        // set FIFO to write in as fd = 3
+        // TODO: create constants for FDs
+        if (dup2(fifo_df_child, 3) < 0)
+        {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+
+        /* 'cpu' program */
+        execl("./chld", "chld"); /* after exec, child stops using this code */
+    }
+    return 0;
+}
+
+void handle_signal()
+{
+    Process *temp;
+    temp = (Process *)malloc(sizeof(Process));
+
+    if (read(fifo_fd, temp, sizeof(Process)) < 0)
+    {
+        perror("read");
+        exit(EXIT_FAILURE);
+    }
+    printf("Inserting job %d to ready queue\n", temp->id);
+    // enqueue(ready_queue, temp);
+    return;
+}
