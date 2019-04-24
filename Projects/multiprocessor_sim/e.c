@@ -10,8 +10,8 @@ int main(int argc, char *argv[])
 {
     printf("Hello, padre\n--------\n");
 
-    int open_log_file, run_time;
-    if ((open_log_file = open("./cpu_log", O_WRONLY | O_TRUNC | O_CREAT, 0644)) < 0)
+    int open_log_file, run_time, read_bytes;
+    if ((open_log_file = open("./cpu_log", O_WRONLY | O_CREAT | O_APPEND, 0644)) < 0)
     {
         perror("open");
         exit(1);
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < 10; i++)
     {
-        if (read(STDIN_FILENO, buf, sizeof(Process)) < 0)
+        if ((read_bytes = read(STDIN_FILENO, buf, sizeof(Process))) < 0)
         {
             perror("read");
             exit(EXIT_FAILURE);
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         /* for verbosity */
         /* printf() will now write to file */
 
-        printf("Action: EXECUTE\t| Process: %d\t| Exec Time: %d\n", buf->id, buf->p_time);
+        printf("Action: EXECUTE\t| Process: %d\t| Exec Time: %d\t| id: %d\n", buf->id, buf->p_time, getpid());
 
         buf->p_time -= run_time;
 
@@ -56,8 +56,5 @@ int main(int argc, char *argv[])
         kill(getppid(), SIGUSR1); // "Hey scheduler, I've written to the pipe."
         i++;
     }
-
-    printf("bye\n");
-
     return 0;
 }

@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int piped[2],  fifo_fd;
+int piped[2][2], fifo_fd, stdout_copy;
 
 /* recieve signal from cpu indicating finshed execution */
 void handle_signal();
@@ -23,77 +23,103 @@ int main()
         printf("Maybe its because fifo exits\n");
     }
 
-    int pid;
+    // int pid;
+    int pid[2];
     srand(time(NULL));
 
     /* safety checks */
-    if (pipe(piped) < 0)
+    if (pipe(piped[0]) < 0)
+    {
+        perror("pipe1");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pipe(piped[1]) < 0)
     {
         perror("pipe1");
         exit(EXIT_FAILURE);
     }
 
     /* fork child that will exec CPU program */
-    if ((pid = fork()) < 0)
+    for (int i = 0; i < 2; i++)
     {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    }
-    else if (pid > 0) // parent process
-    {
-
-        close(piped[0]); // close reading end of pipe
-
-        // FIFO to read from when signaled
-        if ((fifo_fd = open(fifo_path, O_RDONLY)) < 0)
+        if ((pid[i] = fork()) < 0)
         {
-            perror("open");
+            perror("fork");
             exit(EXIT_FAILURE);
         }
-
-        Process *process_to_send;
-        int i = 0;
-
-        while (i < 10)
+        else if (pid[i] == 0) // child process
         {
-            process_to_send = process_gen();
-            if (write(piped[1], process_to_send, sizeof(Process)) < 0)
+
+            printf("orthopedicssssssss\n\n");
+            close(piped[i][1]); // close writing end
+
+            int fifo_df_child;
+            if ((fifo_df_child = open(fifo_path, O_WRONLY)) < 0)
             {
-                perror("write");
+                perror("open");
                 exit(EXIT_FAILURE);
             }
-            i++;
-        }
-        wait(NULL);
-    }
-    else // child process
-    {
-        close(piped[1]);
 
-        int fifo_df_child;
-        if ((fifo_df_child = open(fifo_path, O_WRONLY)) < 0)
+            // pipe to read from
+            if (dup2(piped[i][0], STDIN_FILENO) < 0)
+            {
+                perror("dup2");
+                exit(EXIT_FAILURE);
+            }
+
+            // set FIFO to write in as fd = 3
+            // TODO: create constants for FDs
+            if (dup2(fifo_df_child, 3) < 0)
+            {
+                perror("dup2");
+                exit(EXIT_FAILURE);
+            }
+
+            /* 'cpu' program */
+            execl("./chld", "chld"); /* after exec, child stops using this code */
+        }
+        else // parent process
         {
-            perror("open");
-            exit(EXIT_FAILURE);
-        }
+            if (i == 0)
+            {
+                // FIFO to read from when signaled
+                if ((fifo_fd = open(fifo_path, O_RDONLY)) < 0)
+                {
+                    perror("open");
+                    exit(EXIT_FAILURE);
+                }
+            }
 
-        // pipe to read from
-        if (dup2(piped[0], STDIN_FILENO) < 0)
-        {
-            perror("dup2");
-            exit(EXIT_FAILURE);
-        }
+            close(piped[i][0]); // close reading end of pipe
 
-        // set FIFO to write in as fd = 3
-        // TODO: create constants for FDs
-        if (dup2(fifo_df_child, 3) < 0)
-        {
-            perror("dup2");
-            exit(EXIT_FAILURE);
-        }
+            Process *process_to_send;
+            int j = 0;
 
-        /* 'cpu' program */
-        execl("./chld", "chld"); /* after exec, child stops using this code */
+            while (j < 10)
+            {
+                process_to_send = process_gen();
+                if (j < 5)
+                {
+                    if (write(piped[0][1], process_to_send, sizeof(Process)) < 0)
+                    {
+                        perror("write");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    if (write(piped[1][1], process_to_send, sizeof(Process)) < 0)
+                    {
+                        perror("write");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                j++;
+            }
+
+            // wait(NULL);
+        }
     }
     return 0;
 }
@@ -108,6 +134,7 @@ void handle_signal()
         perror("read");
         exit(EXIT_FAILURE);
     }
+
     printf("Inserting job %d to ready queue\n", temp->id);
     // enqueue(ready_queue, temp);
     return;

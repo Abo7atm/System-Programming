@@ -93,8 +93,25 @@ void test_if()
     return;
 }
 
+void test_closing_fd_twice()
+{
+    if (close(0) < 0)
+    {
+        printf("error first\n");
+    }
+
+    if (close(0) < 0)
+    {
+        // just returns -1 ... no biggie...
+        printf("error second\n");
+    }
+}
+
 int main()
 {
+    test_closing_fd_twice();
+    exit(EXIT_SUCCESS);
+
     test_if();
     exit(0);
 
