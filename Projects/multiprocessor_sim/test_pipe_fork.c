@@ -17,14 +17,14 @@ int main()
     signal(SIGUSR1, handle_signal);
 
     char *fifo_path = "/tmp/sched_cpu_fifo";
+
     if (mkfifo(fifo_path, 0666) < 0)
     {
         perror("mkfifo");
         printf("Maybe its because fifo exits\n");
     }
 
-    // int pid;
-    int pid[2];
+    int pid[2], wpid, status = 0;
     srand(time(NULL));
 
     /* safety checks */
@@ -92,35 +92,37 @@ int main()
             }
 
             close(piped[i][0]); // close reading end of pipe
-
-            Process *process_to_send;
-            int j = 0;
-
-            while (j < 10)
-            {
-                process_to_send = process_gen();
-                if (j < 5)
-                {
-                    if (write(piped[0][1], process_to_send, sizeof(Process)) < 0)
-                    {
-                        perror("write");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else
-                {
-                    if (write(piped[1][1], process_to_send, sizeof(Process)) < 0)
-                    {
-                        perror("write");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                j++;
-            }
-
-            // wait(NULL);
         }
     }
+
+    Process *process_to_send;
+    int j = 0;
+
+    while (j < 10)
+    {
+        process_to_send = process_gen();
+        // send 5 jobs to CPU1 and 5 jobs to CPU2
+        if (j < 5)
+        {
+            if (write(piped[0][1], process_to_send, sizeof(Process)) < 0)
+            {
+                perror("write");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            if (write(piped[1][1], process_to_send, sizeof(Process)) < 0)
+            {
+                perror("write");
+                exit(EXIT_FAILURE);
+            }
+        }
+        j++;
+    }
+
+    // to make sure that all the jobs are inserted back to the scheduler
+    while ((wpid = wait(&status)) > 0);
     return 0;
 }
 
@@ -135,7 +137,7 @@ void handle_signal()
         exit(EXIT_FAILURE);
     }
 
-    printf("Inserting job %d to ready queue\n", temp->id);
+    printf("Recieved job %d at scheduler\n", temp->id);
     // enqueue(ready_queue, temp);
     return;
 }

@@ -18,8 +18,9 @@ int main(int argc, char *argv[])
     }
 
     printf("Processor starting...\n");
+
     // set log file as stdout
-    if (dup2(open_log_file, 1) < 0)
+    if (dup2(open_log_file, STDOUT_FILENO) < 0)
     {
         perror("dup2");
         exit(EXIT_FAILURE);
@@ -38,9 +39,7 @@ int main(int argc, char *argv[])
 
         run_time = (rand() % 10) + 1; /* random number between 1 and 10 */
 
-        /* for verbosity */
-        /* printf() will now write to file */
-
+        // printf writes to log file
         printf("Action: EXECUTE\t| Process: %d\t| Exec Time: %d\t| id: %d\n", buf->id, buf->p_time, getpid());
 
         buf->p_time -= run_time;
@@ -52,9 +51,9 @@ int main(int argc, char *argv[])
             perror("write");
             exit(EXIT_FAILURE);
         }
-
+        // why isn't all jobs getting back to the scheduler?
         kill(getppid(), SIGUSR1); // "Hey scheduler, I've written to the pipe."
         i++;
     }
-    return 0;
+    exit(EXIT_SUCCESS);
 }
