@@ -33,9 +33,9 @@ int main()
     }
     else if (gen_pid == 0) // child
     {
-        printf("executing\n");
-        if (execl("./generator", "generator") < 0)
+        if (execl("./generator", "generator", NULL) < 0)
         {
+            printf("generator exec\n");
             perror("EXEC");
         }
     }
@@ -119,7 +119,6 @@ int main()
     // read until FIFO is empty
     while(read(job_gen_fd, process_to_send, sizeof(Process)) > 0)
     {
-	printf("while loop iteration %d\n", j);
         // send job to CPU #1
         if (j%2==0) 
         {
@@ -146,12 +145,10 @@ int main()
         kill(pid[k], SIGUSR2);
     }
 
-    printf("Killing generator process\n");
     kill(SIGKILL, gen_pid);
     // to make sure that all the jobs are inserted back to the scheduler
     while ((wpid = wait(&status)) > 0)
         ;
-    printf("finished waiting for children\n");
     return 0;
 } // end of main()
 
@@ -160,7 +157,6 @@ void handle_return()
     Process *temp;
     temp = (Process *)malloc(sizeof(Process));
     
-    printf("handle return is going to read\n");
     if (read(cpu_fifo_fd, temp, sizeof(Process)) < 0)
     {
         perror("read");
