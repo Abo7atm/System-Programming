@@ -7,27 +7,49 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-int piped[2][2], fifo_fd, stdout_copy;
+int piped[2][2], stdout_copy, cpu_fifo_fd;
 
 /* recieve signal from cpu indicating finshed execution */
-void handle_signal();
+void handle_return();
 
 int main()
 {
-    signal(SIGUSR1, handle_signal);
+    signal(SIGUSR1, handle_return);
 
-    char *fifo_path = "/tmp/sched_cpu_fifo";
+    char *cpu_fifo_path = "/tmp/sched_cpu_fifo";
+    char *job_gen_fifo = "/tmp/job_gen_fifo";
 
-    if (mkfifo(fifo_path, 0666) < 0)
-    {
-        perror("mkfifo");
-        printf("Maybe its because fifo exits\n");
-    }
+    mkfifo(cpu_fifo_path, 0666);
+    mkfifo(job_gen_fifo, 0666);
 
-    int pid[2], wpid, status = 0;
+    int pid[2], gen_pid, wpid, status = 0, job_gen_fd;
     srand(time(NULL));
 
-    /* safety checks */
+    // fork generator
+    if ((gen_pid = fork()) < 0)
+    {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    else if (gen_pid == 0) // child
+    {
+        printf("executing\n");
+        if (execl("./generator", "generator") < 0)
+        {
+            perror("EXEC");
+        }
+    }
+    else // parent
+    {
+        if ((job_gen_fd = open(job_gen_fifo, O_RDONLY)) < 0)
+        {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // intializing pipes
+    // would opening pipes in O_NONBLOCK solve the problem?
     if (pipe(piped[0]) < 0)
     {
         perror("pipe1");
@@ -43,66 +65,63 @@ int main()
     /* fork child that will exec CPU program */
     for (int i = 0; i < 2; i++)
     {
-        if ((pid[i] = fork()) < 0)
+        if ((pid[i] = fork()) < 0)  // error
         {
             perror("fork");
             exit(EXIT_FAILURE);
         }
-        else if (pid[i] == 0) // child process
+        else if (pid[i] == 0)       // child process
         {
-
-            printf("orthopedicssssssss\n\n");
             close(piped[i][1]); // close writing end
 
-            int fifo_df_child;
-            if ((fifo_df_child = open(fifo_path, O_WRONLY)) < 0)
-            {
-                perror("open");
-                exit(EXIT_FAILURE);
-            }
-
-            // pipe to read from
+            // set up pipe for child
             if (dup2(piped[i][0], STDIN_FILENO) < 0)
             {
                 perror("dup2");
                 exit(EXIT_FAILURE);
             }
 
-            // set FIFO to write in as fd = 3
-            // TODO: create constants for FDs
-            if (dup2(fifo_df_child, 3) < 0)
+            // 'cpu' program
+            if (execl("./chld", "chld") < 0)
             {
-                perror("dup2");
-                exit(EXIT_FAILURE);
+                perror("EXEC");
             }
-
-            /* 'cpu' program */
-            execl("./chld", "chld"); /* after exec, child stops using this code */
         }
-        else // parent process
+        else                        // parent process
         {
             if (i == 0)
             {
-                // FIFO to read from when signaled
-                if ((fifo_fd = open(fifo_path, O_RDONLY)) < 0)
+                // FIFO to get newly generated jobs
+                if ((job_gen_fd = open(job_gen_fifo, O_RDONLY)) < 0)
+                {
+                    perror("open");
+                    exit(EXIT_FAILURE);
+                }
+                // FIFO to get jobs that finished execution
+                if ((cpu_fifo_fd = open(cpu_fifo_path, O_RDONLY)) < 0)
                 {
                     perror("open");
                     exit(EXIT_FAILURE);
                 }
             }
-
             close(piped[i][0]); // close reading end of pipe
         }
     }
 
+    // ------ code only executed by the parent ------
+
     Process *process_to_send;
+    process_to_send = (Process *) malloc(sizeof(Process));
+
     int j = 0;
 
-    while (j < 10)
+    // dispatching jobs
+    // read until FIFO is empty
+    while(read(job_gen_fd, process_to_send, sizeof(Process)) > 0)
     {
-        process_to_send = process_gen();
-        // send 5 jobs to CPU1 and 5 jobs to CPU2
-        if (j < 5)
+	printf("while loop iteration %d\n", j);
+        // send job to CPU #1
+        if (j%2==0) 
         {
             if (write(piped[0][1], process_to_send, sizeof(Process)) < 0)
             {
@@ -110,6 +129,7 @@ int main()
                 exit(EXIT_FAILURE);
             }
         }
+        //...send job to CPU #2
         else
         {
             if (write(piped[1][1], process_to_send, sizeof(Process)) < 0)
@@ -120,18 +140,28 @@ int main()
         }
         j++;
     }
+    
+    for (int k=0; k<2; k++)
+    {
+        kill(pid[k], SIGUSR2);
+    }
 
+    printf("Killing generator process\n");
+    kill(SIGKILL, gen_pid);
     // to make sure that all the jobs are inserted back to the scheduler
-    while ((wpid = wait(&status)) > 0);
+    while ((wpid = wait(&status)) > 0)
+        ;
+    printf("finished waiting for children\n");
     return 0;
-}
+} // end of main()
 
-void handle_signal()
+void handle_return()
 {
     Process *temp;
     temp = (Process *)malloc(sizeof(Process));
-
-    if (read(fifo_fd, temp, sizeof(Process)) < 0)
+    
+    printf("handle return is going to read\n");
+    if (read(cpu_fifo_fd, temp, sizeof(Process)) < 0)
     {
         perror("read");
         exit(EXIT_FAILURE);

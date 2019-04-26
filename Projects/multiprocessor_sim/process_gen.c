@@ -1,4 +1,8 @@
 #include "functions.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 int process_id = 1;
 
@@ -55,7 +59,7 @@ Process *process_gen()
     r->wait_time = 0;
     r->finished_io = 0;
 
-    // printf("JOB CREATED:\n");
+    // printf("JOB CREATED:\n"), log_fd;
     // printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
         // r->id, r->p_time, r->mem, r->resources_required);
 
@@ -81,4 +85,63 @@ int generator(Process_queue *queue)
     }
 
     return n_processes;
+}
+
+void generator2(int fd)
+{
+    int n_processes = (rand() % (5 + 1));
+    Process *t;
+
+    for (int i = 0; i < n_processes + 1; i++)
+    {
+        t = process_gen();
+        if (write(fd, t, sizeof(Process)) < 0)
+        {
+            perror("write");
+            exit(EXIT_FAILURE);
+        }
+        // printf("-- Action: INSERT JQ\t| Process: %d\n", t->id);
+    }
+
+    return;
+}
+
+int main()
+{
+    srand(time(NULL));
+
+    char *log_file = "./gen_log";
+    char *fifo_path = "/tmp/job_gen_fifo";
+    int fifo_fd, counter = 0, log_fd;
+
+    mkfifo(fifo_path, 0666);
+
+    if ((fifo_fd = open(fifo_path, O_WRONLY)) < 0)
+    {
+        perror("open");
+        exit(EXIT_FAILURE);
+    }
+    
+    if ((log_fd = open(log_file, O_WRONLY|O_CREAT)) < 0)
+    {
+        perror("open");
+    	exit(EXIT_FAILURE);
+    }
+
+    if (dup2(log_fd, STDOUT_FILENO) < 0)
+    {
+	    perror("dup2");
+	    exit(EXIT_FAILURE);
+    }
+
+    while(counter < 3)
+    {
+        // generate 1 to 5 jobs ...
+        generator2(fifo_fd);
+        // ... every one second
+        sleep(1);
+        counter++;
+    }
+
+    exit(EXIT_SUCCESS);
 }
