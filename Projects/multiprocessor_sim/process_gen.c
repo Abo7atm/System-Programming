@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+
 
 int process_id = 1;
 
@@ -18,6 +20,13 @@ int proba(int th) /* th => threshold */
         return 1;
     }
     return 0;
+}
+
+unsigned long get_time()
+{
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return 1000000 * t.tv_sec + t.tv_usec;
 }
 
 int resources_required()
@@ -63,7 +72,7 @@ Process *process_gen()
     // printf("\t-- process id: %d, processing time: %d, memory: %d, resources: %d\n",
         // r->id, r->p_time, r->mem, r->resources_required);
 
-    printf("-- Action: CREATE\t| Process: %d\t| Resources: %d\t| P_Time: %d\n", process_id-1, r->resources_required, p_time);
+    printf("-- Action: CREATE\t| Process: %d\t| Resources: %d\t| P_Time: %d\t| Time: %lu\n", process_id-1, r->resources_required, p_time, get_time());
     return r;
 }
 
